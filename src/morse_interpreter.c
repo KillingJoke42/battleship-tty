@@ -61,7 +61,49 @@ void print_string_ascii(char* msg)
 
 char* char_to_morseletter(char msgch)
 {
-    
+    char* morselstr = (char *)malloc((sizeof(char)) * (MORSE_LETTER_MAXLEN + 1));
+    int striter = 0;
+    if (CHAR_IS_ALPHA(msgch))
+    {
+        msgch = 10 + ((msgch >= 'A' && msgch <= 'Z') ? (msgch - 'A') : (msgch - 'a'));
+    }
+    else
+    {
+        msgch = msgch - '0';
+    }
+    int shift = 0;
+    letter_t symb = morse_map[msgch];
+    if (symb == 0b1)
+    {
+        morselstr[0] = '.';
+        morselstr[1] = '\0';
+        return morselstr;
+    }
+    while(!(symb & (1 << (MORSE_BIN_MAX_BITS - 1 - shift))))
+        shift++;
+    shift = (MORSE_BIN_MAX_BITS - shift) - 3;
+    while(shift >= 0)
+    {
+        uint8_t binfr = (symb & (CHAR_TO_MORSE_WINDOW_MASK << shift)) >> shift;
+        switch (binfr)
+        {
+            case 0b111:
+                morselstr[striter++] = '-';
+                shift -= (CHAR_TO_MORSE_WINDOW_BITS + 1);
+                break;
+            case 0b101:
+                morselstr[striter++] = '.';
+                shift -= (CHAR_TO_MORSE_WINDOW_BITS - 1);
+                break;
+            default:
+                printf("window: %x\n", binfr);
+                break;
+        }
+    }
+    if (shift == -2)
+        morselstr[striter++] = '.';
+    morselstr[striter] = '\0';
+    return morselstr;
 }
 
 char morseletter_to_char(char* morseletter)
