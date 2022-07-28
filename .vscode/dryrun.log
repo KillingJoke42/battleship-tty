@@ -1,0 +1,7 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/anantraina/battleship'
+gcc -c -o obj/main.o src/main.c -I./include
+gcc -c -o obj/morse_interpreter.o src/morse_interpreter.c -I./include
+gcc -o exec/battleship obj/main.o obj/morse_interpreter.o -I./include
+make: Leaving directory '/home/anantraina/battleship'
+ 
