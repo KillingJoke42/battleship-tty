@@ -16,5 +16,6 @@ char* read_dynamic_string(void);
 void check_message_validity(char* msg);
 void print_string_ascii(char* msg);
 char* char_to_morseletter(char msgch);
+char* string_to_morse(char* msg);
 char morseletter_to_char(char* morseletter);
 #endif

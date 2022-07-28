@@ -106,6 +106,32 @@ char* char_to_morseletter(char msgch)
     return morselstr;
 }
 
+char* string_to_morse(char* msg)
+{
+    char *morse = (char *)malloc((7 * (sizeof(msg)/sizeof(msg[0]))) * sizeof(char));
+    if (morse == NULL)
+    {
+        printf("Error: could not allocate memory for morse string.\n");
+        return NULL;
+    }
+    int iter = 0;
+    while (*(msg + iter) != '\0')
+    {
+        sprintf(morse, "%s%s", morse, char_to_morseletter(*(msg + iter)));
+        if (*(msg + iter + 1) == ' ')
+        {
+            sprintf(morse, "%s%s", morse, "       ");
+            iter += 2;
+        }
+        else
+        {
+            sprintf(morse, "%s%s", morse, "   ");
+            iter++;
+        }
+    }
+    return morse;
+}
+
 char morseletter_to_char(char* morseletter)
 {
 
