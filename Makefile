@@ -5,7 +5,7 @@ CFLAGS=-I$(INCLUDE_DIR)
 
 OBJ_DIR=./obj
 
-_HEADERS = morse_interpreter.h
+_HEADERS = morse_interpreter.h morse_data.h
 HEADERS = $(patsubst %,$(INCLUDE_DIR)/%,$(_HEADERS))
 
 _OBJ = main.o morse_interpreter.o

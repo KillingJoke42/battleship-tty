@@ -4,6 +4,9 @@
 #include <stdint.h>
 
 #define MORSE_LETTER_MAXLEN 5
+#define MORSE_BIN_MAX_BITS 19
+#define CHAR_TO_MORSE_WINDOW_MASK 0b111
+#define CHAR_TO_MORSE_WINDOW_BITS 3
 
 #define CHAR_IS_NUM(ch) (ch >= '0' && ch <= '9')
 #define CHAR_IS_ALPHA(ch) ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'))
