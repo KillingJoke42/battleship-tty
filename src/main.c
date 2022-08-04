@@ -8,8 +8,16 @@
 int main(void)
 {
     player_t *player = (player_t *)malloc(sizeof(player_t));
-    memset(player->playerPlacement, 0, sizeof(player->playerPlacement));
+    player_init(player);
     phase_place_ships(player);
-
+    while(1)
+    {
+        phase_fire(player);
+        if (all_ships_sunk(player))
+        {
+            printf("All ships sunk for %s.\n", player->playerName);
+            break;
+        }
+    }
     return 0;
 }
