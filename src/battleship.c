@@ -1,32 +1,10 @@
 #include <battleship.h>
+#include <playertools.h>
+#include <utils.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-
-void player_init(player_t *player)
-{
-    char c;
-    uint8_t namelen = 1;
-    char *name = (char *)malloc(sizeof(char));
-
-    printf("Enter Your Name: ");
-    while ((c = getchar()) != '\n' && c != EOF)
-    {
-        name[namelen++ - 1] = c;
-        name = realloc(name, sizeof(char) * (namelen));
-    }
-    name[namelen - 1] = '\0';
-    player->playerName = name;
-
-    memset(player->playerPlacement, 0, sizeof(player->playerPlacement));
-
-    player->player_ship_status.carrier = 0;
-    player->player_ship_status.battleship = 0;
-    player->player_ship_status.destroyer = 0;
-    player->player_ship_status.submarine = 0;
-    player->player_ship_status.patrol_boat = 0;
-}
 
 void phase_place_ships(player_t *player)
 {
@@ -179,33 +157,33 @@ void phase_fire(player_t *being_attacked)
     else
     {
         printf("HIT\n");
-        switch (being_attacked->playerPlacement[ship_row][ship_col])
+        switch (being_attacked->playerPlacement[ship_row][ship_col] - 1)
         {
-            case 1:
+            case CARRIER:
                 being_attacked->player_ship_status.carrier += 1;
                 if (is_ship_sunk(being_attacked, 0))
                     printf("Enemy Carrier Sunk\n");
                 break;
 
-            case 2:
+            case BATTLESHIP:
                 being_attacked->player_ship_status.battleship += 1;
                 if (is_ship_sunk(being_attacked, 1))
                     printf("Enemy Battleship Sunk\n");
                 break;
 
-            case 3:
+            case DESTROYER:
                 being_attacked->player_ship_status.destroyer += 1;
                 if (is_ship_sunk(being_attacked, 2))
                     printf("Enemy Destroyer Sunk\n");
                 break;
                 
-            case 4:
+            case SUBMARINE:
                 being_attacked->player_ship_status.submarine += 1;
                 if (is_ship_sunk(being_attacked, 3))
                     printf("Enemy Submarine Sunk\n");
                 break;
 
-            case 5:
+            case PATROL_BOAT:
                 being_attacked->player_ship_status.patrol_boat += 1;
                 if (is_ship_sunk(being_attacked, 4))
                     printf("Enemy Patrol Boat Sunk\n");
@@ -219,23 +197,23 @@ uint8_t is_ship_sunk(player_t *being_attacked, char ship_idx)
 {
     switch (ship_idx)
     {
-    case 0:
+    case CARRIER:
         return (being_attacked->player_ship_status.carrier == SHIP_CARRIER_SZ);
         break;
     
-    case 1:
+    case BATTLESHIP:
         return (being_attacked->player_ship_status.battleship == SHIP_BATTLESHIP_SZ);
         break;
 
-    case 2:
+    case DESTROYER:
         return (being_attacked->player_ship_status.destroyer == SHIP_DESTROYER_SZ);
         break;
 
-    case 3:
+    case SUBMARINE:
         return (being_attacked->player_ship_status.submarine == SHIP_SUBMARINE_SZ);
         break;
 
-    case 4:
+    case PATROL_BOAT:
         return (being_attacked->player_ship_status.patrol_boat == SHIP_PATROL_BOAT_SZ);
         break;
 

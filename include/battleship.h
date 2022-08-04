@@ -1,6 +1,7 @@
 #ifndef __BATTLESHIP_H__
 #define __BATTLESHIP_H__
 
+#include <playertools.h>
 #include <stdint.h>
 
 enum row_axis {
@@ -37,22 +38,6 @@ static char ship_sz_map[] = {SHIP_CARRIER_SZ, SHIP_BATTLESHIP_SZ, SHIP_DESTROYER
 #define NUM_COLS    10
 #define NUM_SHIPS   5
 
-typedef struct {
-    uint8_t carrier;
-    uint8_t battleship;
-    uint8_t destroyer;
-    uint8_t submarine;
-    uint8_t patrol_boat;
-} ship_status_t;
-
-typedef struct {
-    char *playerName;
-    uint8_t idx;
-    uint8_t playerPlacement[NUM_ROWS][NUM_COLS];
-    ship_status_t player_ship_status;
-} player_t;
-
-void player_init(player_t *player);
 void phase_place_ships(player_t *player);
 void phase_fire(player_t *being_attacked);
 uint8_t find_arr_sum(uint8_t* arr, int range);
