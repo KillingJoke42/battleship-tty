@@ -80,3 +80,84 @@ void start_server(server_t *server)
     // Start the game now
     return;
 }
+
+void couch_multiplayer(void)
+{
+    server_t *server = (server_t *)malloc(sizeof(server_t));
+    create_server(server);
+
+    for (int i = 0; i < server->playercnt; i++)
+    {
+        player_t *new_player = (player_t *)malloc(sizeof(player_t));
+        player_init(new_player);
+        new_player->idx = i;
+        server->player_list[i] = new_player;
+    }
+
+    for (int i = 0; i < server->playercnt; i++)
+    {
+        clrscr();
+        printf("Preparation phase for %s\n", server->player_list[i]->playerName);
+        phase_place_ships(server->player_list[i]);
+    }    
+
+    while (!game_over_base_case(server))
+    {
+        for (int i = 0; i < server->playercnt; i++)
+        {
+            printf("%s's turn\n", server->player_list[i]->playerName);
+            printf("What would you like to do?\n");
+            printf("1) Fire on selected player\n");
+            printf("2) View your map of selected player\n");
+            printf("3) End round\n");
+            char c, choice;
+            while ((c = getchar()) != '\n' && c != EOF)
+                choice = c;
+            if (choice == '1')
+            {
+                printf("Choose player to fire on.\n");
+                for (int j = 0; j < server->playercnt; j++)
+                {
+                    if (i != server->player_list[j]->idx)
+                        printf("player %d: %s", server->player_list[j]->idx, server->player_list[j]->playerName);
+                }
+                printf("\n");
+                while ((c = getchar()) != '\n' && c != EOF)
+                    choice = c;
+                choice = choice - '0';
+                if (i == choice || choice > server->playercnt - 1)
+                {
+                    printf("Invalid Choice. Ending round for being a smartass\n");
+                    continue;
+                }
+                phase_fire(server->player_list[choice]);
+                printf("Ending round.\n");
+            }
+            else if (choice == '2')
+            {
+                // Implement this please
+                printf("IMPLEMENT THIS!!!!\n");
+            }
+            else
+                continue;
+
+        }
+    }
+}
+
+void lan_game(void)
+{
+    printf("Feature yet to be implemented\n");
+}
+
+uint8_t game_over_base_case(server_t *server)
+{
+    uint8_t sunk_cnt = 0;
+
+    for (int i = 0; i < server->playercnt; i++)
+    {
+        sunk_cnt += all_ships_sunk(server->player_list[i]);
+    }
+
+    return (sunk_cnt == server->playercnt - 1);
+}

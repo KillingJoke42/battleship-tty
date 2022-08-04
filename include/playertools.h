@@ -34,4 +34,9 @@ void protect_server(server_t *server);
 void player_init(player_t *player);
 void start_server(server_t *server);
 
+void couch_multiplayer(void);
+void lan_game(void);
+
+uint8_t game_over_base_case(server_t *server);
+
 #endif
