@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <string.h>
 #include <termios.h>
 
 void create_server(server_t *server)
@@ -48,13 +49,28 @@ void protect_server(server_t *server)
     tcsetattr(0, TCSANOW, &t);    
 }
 
-void player_init(player_t *player)
+void player_init(player_t *player, uint8_t players_cnt, uint8_t player_idx)
 {
     char c;
     char* name;
     
+    player->idx = player_idx;
+
     name = get_string("Enter player name: ");
     player->playerName = name;
+
+    player->oppn_info = (uint8_t ***)malloc(sizeof(uint8_t **) * players_cnt);
+    for (int i = 0; i < players_cnt; i++)
+    {
+        if (i != player_idx)
+        {
+            player->oppn_info[i] = alloc_dynamic_2d_arr(NUM_ROWS, NUM_COLS);
+            clear_2d_arr(player->oppn_info[i], 'O', NUM_ROWS, NUM_COLS);
+            //memset(player->oppn_info[i], 0, sizeof(uint8_t) * NUM_ROWS * NUM_COLS);
+        }
+        else
+            player->oppn_info[i] = NULL;
+    }
 
     memset(player->playerPlacement, 0, sizeof(player->playerPlacement));
 
@@ -69,7 +85,7 @@ void start_server(server_t *server)
 {
     char c;
     player_t *host = (player_t *)malloc(sizeof(player_t));
-    player_init(host);
+    player_init(host, server->playercnt, 0);
 
     server->player_list[0] = host;
     server->joined_players = 1;
@@ -89,8 +105,8 @@ void couch_multiplayer(void)
     for (int i = 0; i < server->playercnt; i++)
     {
         player_t *new_player = (player_t *)malloc(sizeof(player_t));
-        player_init(new_player);
-        new_player->idx = i;
+        player_init(new_player, server->playercnt, i);
+        // new_player->idx = i;
         server->player_list[i] = new_player;
     }
 
@@ -115,6 +131,7 @@ void couch_multiplayer(void)
                 choice = c;
             if (choice == '1')
             {
+                // Make function from this. Redundant code
                 printf("Choose player to fire on.\n");
                 for (int j = 0; j < server->playercnt; j++)
                 {
@@ -130,13 +147,42 @@ void couch_multiplayer(void)
                     printf("Invalid Choice. Ending round for being a smartass\n");
                     continue;
                 }
-                phase_fire(server->player_list[choice]);
+                phase_fire(server->player_list[i], server->player_list[choice]);
                 printf("Ending round.\n");
             }
             else if (choice == '2')
             {
-                // Implement this please
-                printf("IMPLEMENT THIS!!!!\n");
+                // Make function from this. Redundant code.
+                printf("Choose player.\n");
+                for (int j = 0; j < server->playercnt; j++)
+                {
+                    if (i != server->player_list[j]->idx)
+                        printf("player %d: %s", server->player_list[j]->idx, server->player_list[j]->playerName);
+                }
+                printf("\n");
+                while ((c = getchar()) != '\n' && c != EOF)
+                    choice = c;
+                choice = choice - '0';
+                if (i == choice || choice > server->playercnt - 1)
+                {
+                    printf("Invalid Choice. Ending round for being a smartass\n");
+                    continue;
+                }
+
+                // Print API locked to static 2d arrs. Fix Please!!
+                printf("  ");
+                for (int format = 0; format < NUM_COLS; format++)
+                    printf("%d ", format);
+                printf("\n");
+                for (int row = 0; row < NUM_ROWS; row++)
+                {
+                    printf("%c ", row + 'A');
+                    for (int col = 0; col < NUM_COLS; col++)
+                    {
+                        printf("%c ", server->player_list[i]->oppn_info[choice][row][col]);
+                    }
+                    printf("\n");
+                }
             }
             else
                 continue;

@@ -18,6 +18,7 @@ typedef struct {
     char *playerName;
     uint8_t idx;
     uint8_t playerPlacement[NUM_ROWS][NUM_COLS];
+    uint8_t ***oppn_info;
     ship_status_t player_ship_status;
 } player_t;
 
@@ -31,7 +32,7 @@ typedef struct {
 
 void create_server(server_t *server);
 void protect_server(server_t *server);
-void player_init(player_t *player);
+void player_init(player_t *player, uint8_t player_cnt, uint8_t player_idx);
 void start_server(server_t *server);
 
 void couch_multiplayer(void);

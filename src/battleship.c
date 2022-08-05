@@ -129,7 +129,7 @@ void print_player_placements(uint8_t player_arr[NUM_ROWS][NUM_COLS])
     }
 }
 
-void phase_fire(player_t *being_attacked)
+void phase_fire(player_t *attacker, player_t *being_attacked)
 {
     char c, ship_row = 10, ship_col = 10;
     printf("Firing at %s.\n", being_attacked->playerName);
@@ -153,7 +153,11 @@ void phase_fire(player_t *being_attacked)
     }
 
     if (being_attacked->playerPlacement[ship_row][ship_col] == 0)
+    {
         printf("MISS\n");
+        if (attacker->oppn_info[being_attacked->idx][ship_row][ship_col] != 'X')
+            attacker->oppn_info[being_attacked->idx][ship_row][ship_col] = '-';
+    }
     else
     {
         printf("HIT\n");
@@ -190,6 +194,7 @@ void phase_fire(player_t *being_attacked)
                 break;
         }
         being_attacked->playerPlacement[ship_row][ship_col] = 0;
+        attacker->oppn_info[being_attacked->idx][ship_row][ship_col] = 'X';
     }
 }
 
