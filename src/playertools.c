@@ -169,6 +169,7 @@ void couch_multiplayer(void)
                     continue;
                 }
 
+                clrscr();
                 // Print API locked to static 2d arrs. Fix Please!!
                 printf("  ");
                 for (int format = 0; format < NUM_COLS; format++)
@@ -183,6 +184,10 @@ void couch_multiplayer(void)
                     }
                     printf("\n");
                 }
+                printf("Press ENTER to continue.");
+                while((c = getchar()) != '\n' && c != '\r');
+                clrscr();
+                i--;
             }
             else
                 continue;
