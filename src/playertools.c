@@ -117,10 +117,12 @@ void couch_multiplayer(void)
         phase_place_ships(server->player_list[i]);
     }    
 
-    while (!game_over_base_case(server))
+    while (1)
     {
         for (int i = 0; i < server->playercnt; i++)
         {
+            if (game_over_base_case(server))
+                goto game_over;
             printf("%s's turn\n", server->player_list[i]->playerName);
             printf("What would you like to do?\n");
             printf("1) Fire on selected player\n");
@@ -148,7 +150,6 @@ void couch_multiplayer(void)
                     continue;
                 }
                 phase_fire(server->player_list[i], server->player_list[choice]);
-                printf("Ending round.\n");
             }
             else if (choice == '2')
             {
@@ -194,6 +195,8 @@ void couch_multiplayer(void)
 
         }
     }
+game_over:
+    printf("GAME OVER\n");
 }
 
 void lan_game(void)
