@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <termios.h>
+#include <time.h>
 
 void create_server(server_t *server)
 {
@@ -101,12 +102,16 @@ void couch_multiplayer(void)
     server_t *server = (server_t *)malloc(sizeof(server_t));
     create_server(server);
 
+    srand(time(0));
+    uint8_t *rng_arr = alloc_rng_arr(server->playercnt);
+    uint8_t server_sz = server->playercnt;
     for (int i = 0; i < server->playercnt; i++)
     {
+        uint8_t rng_val = get_rng_val(rng_arr, &server_sz);
         player_t *new_player = (player_t *)malloc(sizeof(player_t));
-        player_init(new_player, server->playercnt, i);
+        player_init(new_player, server->playercnt, rng_val);
         // new_player->idx = i;
-        server->player_list[i] = new_player;
+        server->player_list[rng_val] = new_player;
     }
 
     for (int i = 0; i < server->playercnt; i++)
@@ -137,7 +142,7 @@ void couch_multiplayer(void)
                 for (int j = 0; j < server->playercnt; j++)
                 {
                     if (i != server->player_list[j]->idx)
-                        printf("player %d: %s", server->player_list[j]->idx, server->player_list[j]->playerName);
+                        printf("player %d: %s\n", server->player_list[j]->idx, server->player_list[j]->playerName);
                 }
                 printf("\n");
                 while ((c = getchar()) != '\n' && c != EOF)
@@ -158,7 +163,7 @@ void couch_multiplayer(void)
                 for (int j = 0; j < server->playercnt; j++)
                 {
                     if (i != server->player_list[j]->idx)
-                        printf("player %d: %s", server->player_list[j]->idx, server->player_list[j]->playerName);
+                        printf("player %d: %s\n", server->player_list[j]->idx, server->player_list[j]->playerName);
                 }
                 printf("\n");
                 while ((c = getchar()) != '\n' && c != EOF)
