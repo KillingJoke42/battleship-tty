@@ -1,6 +1,7 @@
 #ifndef __BATTLESHIP_H__
 #define __BATTLESHIP_H__
 
+#include <playertools.h>
 #include <stdint.h>
 
 enum row_axis {
@@ -37,25 +38,12 @@ static char ship_sz_map[] = {SHIP_CARRIER_SZ, SHIP_BATTLESHIP_SZ, SHIP_DESTROYER
 #define NUM_COLS    10
 #define NUM_SHIPS   5
 
-typedef struct {
-    uint8_t carrier[SHIP_CARRIER_SZ];
-    uint8_t battleship[SHIP_BATTLESHIP_SZ];
-    uint8_t destroyer[SHIP_DESTROYER_SZ];
-    uint8_t submarine[SHIP_SUBMARINE_SZ];
-    uint8_t patrol_boat[SHIP_PATROL_BOAT_SZ];
-} ship_status_t;
-
-typedef struct {
-    char *playerName;
-    uint8_t idx;
-    uint8_t playerPlacement[NUM_ROWS][NUM_COLS];
-    ship_status_t player_ship_status;
-} player_t;
-
 void phase_place_ships(player_t *player);
-uint8_t* phase_fire(void);
+void phase_fire(player_t *attacker, player_t *being_attacked);
 uint8_t find_arr_sum(uint8_t* arr, int range);
 uint8_t find_vertical_sum(uint8_t arr[NUM_ROWS][NUM_COLS], char ship_row, char ship_col, int range);
-uint8_t is_ship_destroyed(ship_status_t *player_ship_status, char ship_type);
+uint8_t is_ship_sunk(player_t *being_attacked, char ship_idx);
 void print_player_placements(uint8_t player_arr[NUM_ROWS][NUM_COLS]);
+uint8_t all_ships_sunk(player_t *being_attacked);
+// char identify_hit_ship(player_t *being_attacked, char ship_row, char ship_col);
 #endif

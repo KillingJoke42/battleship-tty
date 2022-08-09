@@ -5,10 +5,10 @@ CFLAGS=-I$(INCLUDE_DIR)
 
 OBJ_DIR=./obj
 
-_HEADERS = morse_interpreter.h morse_data.h battleship.h
+_HEADERS = morse_interpreter.h morse_data.h battleship.h playertools.h utils.h
 HEADERS = $(patsubst %,$(INCLUDE_DIR)/%,$(_HEADERS))
 
-_OBJ = main.o morse_interpreter.o battleship.o
+_OBJ = main.o morse_interpreter.o battleship.o playertools.o utils.o
 OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 
 $(OBJ_DIR)/%.o: src/%.c $(HEADERS)
