@@ -90,8 +90,7 @@ void start_server(server_t *server)
     server->player_list[0] = host;
     server->joined_players = 1;
 
-    printf("Press ENTER to start.");
-    while((c = getchar()) != '\n' && c != '\r');
+    enter_wait_prompt("Press ENTER to start server");
     // Start looking for clients to join
     // Start the game now
     return;
@@ -146,7 +145,8 @@ void couch_multiplayer(void)
                 choice = choice - '0';
                 if (i == choice || choice > server->playercnt - 1)
                 {
-                    printf("Invalid Choice. Ending round for being a smartass\n");
+                    printf("Invalid Choice\n");
+                    i--;
                     continue;
                 }
                 phase_fire(server->player_list[i], server->player_list[choice]);
@@ -166,7 +166,8 @@ void couch_multiplayer(void)
                 choice = choice - '0';
                 if (i == choice || choice > server->playercnt - 1)
                 {
-                    printf("Invalid Choice. Ending round for being a smartass\n");
+                    printf("Invalid Choice\n");
+                    i--;
                     continue;
                 }
 
@@ -185,13 +186,21 @@ void couch_multiplayer(void)
                     }
                     printf("\n");
                 }
-                printf("Press ENTER to continue.");
-                while((c = getchar()) != '\n' && c != '\r');
+
+                enter_wait_prompt("Press ENTER to continue\n");
                 clrscr();
                 i--;
             }
-            else
+            else if (choice == '3')
+            {
                 continue;
+            }
+            else
+            {
+                printf("Invalid Choice\n");
+                i--;
+                continue;
+            }
 
         }
     }

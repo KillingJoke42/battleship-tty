@@ -39,3 +39,10 @@ void clear_2d_arr(uint8_t **arr, uint8_t val, uint8_t num_rows, uint8_t num_cols
             
     return;
 }
+
+void enter_wait_prompt(char* prompt)
+{
+    char c;
+    printf("%s\n", prompt);
+    while((c = getchar()) != '\n' && c != '\r');
+}
