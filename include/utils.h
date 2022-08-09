@@ -11,4 +11,5 @@
 char* get_string(char* prompt);
 uint8_t** alloc_dynamic_2d_arr(char num_rows, char num_cols);
 void clear_2d_arr(uint8_t **arr, uint8_t val, uint8_t num_rows, uint8_t num_cols);
+void enter_wait_prompt(char* prompt);
 #endif
