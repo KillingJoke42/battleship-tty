@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#define clrscr() printf("\e[1;1H\e[2J")
+#define clrscr() printf("\e[H\e[2J\e[3J")
 
 char* get_string(char* prompt);
 uint8_t** alloc_dynamic_2d_arr(char num_rows, char num_cols);
