@@ -8,7 +8,7 @@
 
 void phase_place_ships(player_t *player)
 {
-    printf("Preparation Phase Begins.\n");
+    // printf("Preparation Phase Begins.\n");
     // printf("You have 1 min 30 s to place your ships, else unplaced ships will be placed randomly\n");
 
     for (int i = 0; i < NUM_SHIPS; i++)
@@ -81,6 +81,8 @@ void phase_place_ships(player_t *player)
             }
 
             print_player_placements(player->playerPlacement);
+            enter_wait_prompt("Press ENTER to continue");
+            clrscr();
             break;
         }
     }
