@@ -17,33 +17,20 @@ void phase_place_ships(player_t *player)
         printf("Placing %s.\n", ship_name_map[i]);
         while (1)
         {
-            char c;
-            while (ship_row < A || ship_row > J)
-            {
-                printf("Row (A-J): ");
-                while((c = getchar()) != '\n' && c != EOF)
-                    ship_row = c - 'A';
-                if (ship_row < A || ship_row > J)
-                    printf("Ship must be placed between row A to J\n");                
-            }
+            ship_row = get_character("Row (A-J): ",
+                                    "Ship must be placed between row A to J\n",
+                                    'A',
+                                    'J') - 'A';
 
-            while (ship_col < 0 || ship_col > 9)
-            {
-                printf("Col (0-9): ");
-                while((c = getchar()) != '\n' && c != EOF)
-                    ship_col = c - '0';
-                if (ship_col < 0 || ship_col > 9)
-                    printf("Ship must be placed between column 0 to 9\n");
-            }
+            ship_col = get_character("Col (0-9): ",
+                                    "Ship must be placed between column 0 to 9\n",
+                                    '0',
+                                    '9') - '0';
 
-            while (orientation != 0 && orientation != 1)
-            {
-                printf("Orientation (Horizontal = 0/ Vertical = 1): ");
-                while((c = getchar()) != '\n' && c != EOF)
-                    orientation = c - '0';
-                if (orientation != 0 && orientation != 1)
-                    printf("Orientation must be either 0 (Horizontal) or 1 (Vertical)\n");
-            }
+            orientation = get_character("Orientation (Horizontal = 0/ Vertical = 1): ",
+                                        "Orientation must be either 0 (Horizontal) or 1 (Vertical)\n",
+                                        '0',
+                                        '1') - '0';
 
             if (player->playerPlacement[ship_row][ship_col])
             {
@@ -52,7 +39,6 @@ void phase_place_ships(player_t *player)
                 continue;
             }
 
-            printf("%d\n", ship_col + ship_sz_map[i] > NUM_COLS);
             if ((orientation == 0 &&
                 (ship_col + ship_sz_map[i] > NUM_COLS ||
                 find_arr_sum(&(player->playerPlacement[ship_row][ship_col]), ship_sz_map[i]))) || 
@@ -65,6 +51,10 @@ void phase_place_ships(player_t *player)
                 continue;
             }
 
+            player->player_ship_status.ship_locs[i].origin_row = ship_row;
+            player->player_ship_status.ship_locs[i].origin_col = ship_col;
+            player->player_ship_status.ship_locs[i].orientation = orientation;
+            
             if (orientation == 0)
             {
                 for (int j = 0; j < ship_sz_map[i]; j++)
@@ -88,7 +78,7 @@ void phase_place_ships(player_t *player)
     }
 }
 
-uint8_t find_arr_sum(uint8_t *arr, int range)
+uint8_t find_arr_sum(char *arr, int range)
 {
     char *ptr;
     uint8_t sum = 0;
@@ -102,7 +92,7 @@ uint8_t find_arr_sum(uint8_t *arr, int range)
     return sum;
 }
 
-uint8_t find_vertical_sum(uint8_t arr[NUM_ROWS][NUM_COLS], char ship_row, char ship_col, int range)
+uint8_t find_vertical_sum(char arr[NUM_ROWS][NUM_COLS], char ship_row, char ship_col, int range)
 {
     uint8_t sum = 0;
 
@@ -114,7 +104,7 @@ uint8_t find_vertical_sum(uint8_t arr[NUM_ROWS][NUM_COLS], char ship_row, char s
     return sum;
 }
 
-void print_player_placements(uint8_t player_arr[NUM_ROWS][NUM_COLS])
+void print_player_placements(char player_arr[NUM_ROWS][NUM_COLS])
 {
     printf("  ");
     for (int i = 0; i < NUM_COLS; i++)
@@ -136,25 +126,17 @@ void phase_fire(player_t *attacker, player_t *being_attacked)
     char c, ship_row = 10, ship_col = 10;
     printf("Firing at %s.\n", being_attacked->playerName);
 
-    while (ship_row < A || ship_row > J)
-    {
-        printf("Row (A-J): ");
-        while((c = getchar()) != '\n' && c != EOF)
-            ship_row = c - 'A';
-        if (ship_row < A || ship_row > J)
-            printf("You must fire between row A to J\n");                
-    }
+    ship_row = get_character("Row (A-J): ",
+                            "You must fire between row A to J\n",
+                            'A',
+                            'J') - 'A';
 
-    while (ship_col < 0 || ship_col > 9)
-    {
-        printf("Col (0-9): ");
-        while((c = getchar()) != '\n' && c != EOF)
-            ship_col = c - '0';
-        if (ship_col < 0 || ship_col > 9)
-            printf("You must fire between column 0 to 9\n");
-    }
+    ship_col = get_character("Col (0-9): ",
+                            "You must fire between column 0 to 9\n",
+                            '0',
+                            '9') - '0';
 
-    if (being_attacked->playerPlacement[ship_row][ship_col] == 0)
+    if (being_attacked->playerPlacement[ship_row][ship_col] <= 0)
     {
         printf("MISS\n");
         if (attacker->oppn_info[being_attacked->idx][ship_row][ship_col] != 'X')
@@ -166,36 +148,40 @@ void phase_fire(player_t *attacker, player_t *being_attacked)
         switch (being_attacked->playerPlacement[ship_row][ship_col] - 1)
         {
             case CARRIER:
-                being_attacked->player_ship_status.carrier += 1;
+                being_attacked->player_ship_status.ship_health[CARRIER] += 1;
+                being_attacked->playerPlacement[ship_row][ship_col] = -(CARRIER + 1);
                 if (is_ship_sunk(being_attacked, 0))
                     printf("Enemy Carrier Sunk\n");
                 break;
 
             case BATTLESHIP:
-                being_attacked->player_ship_status.battleship += 1;
+                being_attacked->player_ship_status.ship_health[BATTLESHIP] += 1;
+                being_attacked->playerPlacement[ship_row][ship_col] = -(BATTLESHIP + 1);
                 if (is_ship_sunk(being_attacked, 1))
                     printf("Enemy Battleship Sunk\n");
                 break;
 
             case DESTROYER:
-                being_attacked->player_ship_status.destroyer += 1;
+                being_attacked->player_ship_status.ship_health[DESTROYER] += 1;
+                being_attacked->playerPlacement[ship_row][ship_col] = -(DESTROYER + 1);
                 if (is_ship_sunk(being_attacked, 2))
                     printf("Enemy Destroyer Sunk\n");
                 break;
                 
             case SUBMARINE:
-                being_attacked->player_ship_status.submarine += 1;
+                being_attacked->player_ship_status.ship_health[SUBMARINE] += 1;
+                being_attacked->playerPlacement[ship_row][ship_col] = -(SUBMARINE + 1);
                 if (is_ship_sunk(being_attacked, 3))
                     printf("Enemy Submarine Sunk\n");
                 break;
 
             case PATROL_BOAT:
-                being_attacked->player_ship_status.patrol_boat += 1;
+                being_attacked->player_ship_status.ship_health[PATROL_BOAT] += 1;
+                being_attacked->playerPlacement[ship_row][ship_col] = -(PATROL_BOAT + 1);
                 if (is_ship_sunk(being_attacked, 4))
                     printf("Enemy Patrol Boat Sunk\n");
                 break;
         }
-        being_attacked->playerPlacement[ship_row][ship_col] = 0;
         attacker->oppn_info[being_attacked->idx][ship_row][ship_col] = 'X';
     }
 }
@@ -204,30 +190,30 @@ uint8_t is_ship_sunk(player_t *being_attacked, char ship_idx)
 {
     switch (ship_idx)
     {
-    case CARRIER:
-        return (being_attacked->player_ship_status.carrier == SHIP_CARRIER_SZ);
-        break;
-    
-    case BATTLESHIP:
-        return (being_attacked->player_ship_status.battleship == SHIP_BATTLESHIP_SZ);
-        break;
+        case CARRIER:
+            return (being_attacked->player_ship_status.ship_health[CARRIER] == SHIP_CARRIER_SZ);
+            break;
+        
+        case BATTLESHIP:
+            return (being_attacked->player_ship_status.ship_health[BATTLESHIP] == SHIP_BATTLESHIP_SZ);
+            break;
 
-    case DESTROYER:
-        return (being_attacked->player_ship_status.destroyer == SHIP_DESTROYER_SZ);
-        break;
+        case DESTROYER:
+            return (being_attacked->player_ship_status.ship_health[DESTROYER] == SHIP_DESTROYER_SZ);
+            break;
 
-    case SUBMARINE:
-        return (being_attacked->player_ship_status.submarine == SHIP_SUBMARINE_SZ);
-        break;
+        case SUBMARINE:
+            return (being_attacked->player_ship_status.ship_health[SUBMARINE] == SHIP_SUBMARINE_SZ);
+            break;
 
-    case PATROL_BOAT:
-        return (being_attacked->player_ship_status.patrol_boat == SHIP_PATROL_BOAT_SZ);
-        break;
+        case PATROL_BOAT:
+            return (being_attacked->player_ship_status.ship_health[PATROL_BOAT] == SHIP_PATROL_BOAT_SZ);
+            break;
 
-    default:
-        printf("Invalid Ship index\n");
-        return 0;
-        break;
+        default:
+            printf("Invalid Ship index\n");
+            return 0;
+            break;
     }
     return 0;
 }
