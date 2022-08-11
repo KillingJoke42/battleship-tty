@@ -13,68 +13,32 @@ void phase_place_ships(player_t *player)
 
     for (int i = 0; i < NUM_SHIPS; i++)
     {
-        char ship_row = 10, ship_col = 10, orientation = 2;
+        // char ship_row = 10, ship_col = 10, orientation = 2;
         printf("Placing %s.\n", ship_name_map[i]);
-        while (1)
+        ship_loc_t loc_vector = get_loc_vector(player, i);
+
+        player->player_ship_status.ship_locs[i].origin_row = loc_vector.origin_row;
+        player->player_ship_status.ship_locs[i].origin_col = loc_vector.origin_col;
+        player->player_ship_status.ship_locs[i].orientation = loc_vector.orientation;
+        
+        if (loc_vector.orientation == 0)
         {
-            ship_row = get_character("Row (A-J): ",
-                                    "Ship must be placed between row A to J\n",
-                                    'A',
-                                    'J') - 'A';
-
-            ship_col = get_character("Col (0-9): ",
-                                    "Ship must be placed between column 0 to 9\n",
-                                    '0',
-                                    '9') - '0';
-
-            orientation = get_character("Orientation (Horizontal = 0/ Vertical = 1): ",
-                                        "Orientation must be either 0 (Horizontal) or 1 (Vertical)\n",
-                                        '0',
-                                        '1') - '0';
-
-            if (player->playerPlacement[ship_row][ship_col])
+            for (int j = 0; j < ship_sz_map[i]; j++)
             {
-                printf("A ship has already been placed here.\n");
-                ship_row = 10; ship_col = 10; orientation = 2;
-                continue;
+                player->playerPlacement[loc_vector.origin_row][loc_vector.origin_col + j] = (i + 1);
             }
-
-            if ((orientation == 0 &&
-                (ship_col + ship_sz_map[i] > NUM_COLS ||
-                find_arr_sum(&(player->playerPlacement[ship_row][ship_col]), ship_sz_map[i]))) || 
-                (orientation == 1 &&
-                (ship_row + ship_sz_map[i] > NUM_ROWS ||
-                find_vertical_sum(player->playerPlacement, ship_row, ship_col, ship_sz_map[i]))))
-            {
-                printf("Cannot place ship here: invalid placement\n");
-                ship_row = 10; ship_col = 10; orientation = 2;
-                continue;
-            }
-
-            player->player_ship_status.ship_locs[i].origin_row = ship_row;
-            player->player_ship_status.ship_locs[i].origin_col = ship_col;
-            player->player_ship_status.ship_locs[i].orientation = orientation;
-            
-            if (orientation == 0)
-            {
-                for (int j = 0; j < ship_sz_map[i]; j++)
-                {
-                    player->playerPlacement[ship_row][ship_col + j] = (i + 1);
-                }
-            }
-            else
-            {
-                for (int j = 0; j < ship_sz_map[i]; j++)
-                {
-                    player->playerPlacement[ship_row + j][ship_col] = (i + 1);
-                }
-            }
-
-            print_player_placements(player->playerPlacement);
-            enter_wait_prompt("Press ENTER to continue");
-            clrscr();
-            break;
         }
+        else
+        {
+            for (int j = 0; j < ship_sz_map[i]; j++)
+            {
+                player->playerPlacement[loc_vector.origin_row + j][loc_vector.origin_col] = (i + 1);
+            }
+        }
+
+        print_player_placements(player->playerPlacement);
+        enter_wait_prompt("Press ENTER to continue");
+        clrscr();
     }
 }
 
@@ -226,4 +190,57 @@ uint8_t all_ships_sunk(player_t *being_attacked)
         sunkcnt += (is_ship_sunk(being_attacked, i));
     }
     return (sunkcnt == NUM_SHIPS);
+}
+
+uint8_t check_availability(player_t *player, ship_loc_t loc_vector, uint8_t ship_sz)
+{
+    uint8_t ship_row = loc_vector.origin_row;
+    uint8_t ship_col = loc_vector.origin_col;
+    uint8_t ship_ori = loc_vector.orientation;
+    if (player->playerPlacement[ship_row][ship_col])
+    {
+        printf("A ship has already been placed here.\n");
+        return 0;
+    }
+
+    if ((ship_ori == 0 &&
+        (ship_col + ship_sz > NUM_COLS ||
+        find_arr_sum(&(player->playerPlacement[ship_row][ship_col]), ship_sz))) || 
+        (ship_ori == 1 &&
+        (ship_row + ship_sz > NUM_ROWS ||
+        find_vertical_sum(player->playerPlacement, ship_row, ship_col, ship_sz))))
+    {
+        printf("Cannot place ship here: invalid placement\n");
+        return 0;
+    }
+
+    return 1;
+}
+
+ship_loc_t get_loc_vector(player_t *player, uint8_t shiptype)
+{
+    char new_loc_row, new_loc_col, new_loc_ori;
+    ship_loc_t loc_vector;
+    while (1)
+    {
+        new_loc_row = get_character("Row (A-J): ",
+                                        "Ship must be placed between row A to J\n",
+                                        'A',
+                                        'J') - 'A';
+        new_loc_col = get_character("Col (0-9): ",
+                                        "Ship must be placed between column 0 to 9\n",
+                                        '0',
+                                        '9') - '0';
+        new_loc_ori = get_character("Orientation (Horizontal = 0/ Vertical = 1): ",
+                                        "Orientation must be either 0 (Horizontal) or 1 (Vertical)\n",
+                                        '0',
+                                        '1') - '0';
+
+        loc_vector = (ship_loc_t){new_loc_row, new_loc_col, new_loc_ori};
+        if (!check_availability(player, loc_vector, ship_sz_map[shiptype]))
+            continue;
+
+        break;
+    }
+    return loc_vector;
 }

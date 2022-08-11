@@ -155,7 +155,7 @@ void couch_multiplayer(void)
             switch (choice)
             {
                 case '0':
-                    RandomCellReveal(server);
+                    MoveShip(server, i);
                     break;
                 case '1':
                     if ((choice = select_a_player(server, i)) == -1)
@@ -185,6 +185,7 @@ void couch_multiplayer(void)
                     enter_wait_prompt("Press ENTER to continue\n");
                     clrscr();
                     i--;
+                    continue;
                     break;
 
                 case '3':
@@ -213,9 +214,7 @@ uint8_t game_over_base_case(server_t *server)
     uint8_t sunk_cnt = 0;
 
     for (int i = 0; i < server->playercnt; i++)
-    {
         sunk_cnt += all_ships_sunk(server->player_list[i]);
-    }
 
     return (sunk_cnt == server->playercnt - 1);
 }

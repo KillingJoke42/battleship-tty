@@ -123,3 +123,43 @@ uint8_t get_rng_val(uint8_t *arr, uint8_t *sz)
 
     return ret;
 }
+
+void scalar_multiplication(char (*dest)[NUM_ROWS][NUM_COLS], char (*src)[NUM_ROWS][NUM_COLS], uint8_t binarize)
+{
+    for (int i = 0; i < NUM_ROWS; i++)
+    {
+        for (int j = 0; j < NUM_COLS; j++)
+        {
+            (*dest)[i][j] = (binarize == 0) ? ((*dest)[i][j] * (*src)[i][j]) : (((*dest)[i][j] * (*src)[i][j]) ? '#' : '0');
+        }
+    }
+}
+
+void scalar_swap(char dest[NUM_ROWS][NUM_COLS], char src[NUM_ROWS][NUM_COLS])
+{
+    for (int i = 0; i < NUM_ROWS; i++)
+    {
+        for (int j = 0; j < NUM_COLS; j++)
+        {
+            dest[i][j] = dest[i][j] + src[i][j];
+            src[i][j] = dest[i][j] - src[i][j];
+            dest[i][j] = dest[i][j] - src[i][j];
+        }
+    }
+}
+
+void swapchars(char *x, char *y)
+{
+    *x = *x + *y;
+    *y = *x - *y;
+    *x = *x - *y;
+    return;
+}
+
+void swapuint8(uint8_t *x, uint8_t *y)
+{
+    *x = *x + *y;
+    *y = *x - *y;
+    *x = *x - *y;
+    return;
+}

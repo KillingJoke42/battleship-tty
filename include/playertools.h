@@ -3,9 +3,17 @@
 
 #include <stdint.h>
 
+#ifndef NUM_ROWS
 #define NUM_ROWS    10
+#endif
+
+#ifndef NUM_COLS
 #define NUM_COLS    10
+#endif
+
+#ifndef NUM_SHIPS
 #define NUM_SHIPS   5
+#endif
 
 typedef struct {
     uint8_t origin_row;
