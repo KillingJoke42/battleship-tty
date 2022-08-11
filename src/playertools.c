@@ -34,13 +34,19 @@ void create_server(server_t *server)
 
 void protect_server(server_t *server)
 {
-    echo_off();
+    struct termios t;
+    tcgetattr(0, &t);
+    t.c_lflag &= ~ECHO;
+    tcsetattr(0, TCSANOW, &t);
 
     char* password;
     password = get_string("Enter server password: ");
     server->pass = password;  
 
-    echo_on();
+    printf("\n");
+    tcgetattr(0, &t);
+    t.c_lflag |= ECHO;
+    tcsetattr(0, TCSANOW, &t);
 }
 
 void player_init(player_t *player, uint8_t players_cnt, uint8_t player_idx)
@@ -155,7 +161,7 @@ void couch_multiplayer(void)
             switch (choice)
             {
                 case '0':
-                    MoveShip(server, i);
+                    RevealPlayerPlacement(server, i);
                     break;
                 case '1':
                     if ((choice = select_a_player(server, i)) == -1)

@@ -77,7 +77,7 @@ void ReviveCell(server_t * server, uint8_t invoker_idx, uint8_t ack)
 
 void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack)
 {
-    char new_loc_row, new_loc_col, new_loc_ori;
+    // char new_loc_row, new_loc_col, new_loc_ori;
     uint8_t downed = 0;
     printf("Choose which downed ship to revive\n");
     player_t *invoker_ptr = server->player_list[invoker_idx];
@@ -101,33 +101,13 @@ void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack)
     } while (!is_ship_sunk(invoker_ptr, choice));
     
     printf("Enter new location for revived ship\n");
-    while (1)
-    {
-        new_loc_row = get_character("Row (A-J): ",
-                                        "Ship must be placed between row A to J\n",
-                                        'A',
-                                        'J') - 'A';
-        new_loc_col = get_character("Col (0-9): ",
-                                        "Ship must be placed between column 0 to 9\n",
-                                        '0',
-                                        '9') - '0';
-        new_loc_ori = get_character("Orientation (Horizontal = 0/ Vertical = 1): ",
-                                        "Orientation must be either 0 (Horizontal) or 1 (Vertical)\n",
-                                        '0',
-                                        '1') - '0';
-
-        ship_loc_t loc_vector = (ship_loc_t){new_loc_row, new_loc_col, new_loc_ori};
-        if (!check_availability(invoker_ptr, loc_vector, ship_sz_map[choice]))
-            continue;
-
-        break;
-    }
+    ship_loc_t loc_vector = get_loc_vector(invoker_ptr, choice);
 
     // change the invoker's ship placement
     for (int j = 0; j < ship_sz_map[choice]; j++)
     {
-        char new_row_offset = new_loc_row + ((new_loc_ori == 0) ? 0 : j);
-        char new_col_offset = new_loc_col + ((new_loc_ori == 0) ? j : 0);
+        char new_row_offset = loc_vector.origin_row + ((loc_vector.orientation == 0) ? 0 : j);
+        char new_col_offset = loc_vector.origin_col + ((loc_vector.orientation == 0) ? j : 0);
         invoker_ptr->playerPlacement[new_row_offset][new_col_offset] = (choice + 1);
     }
 
@@ -150,9 +130,9 @@ void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack)
     }
 
     invoker_ptr->player_ship_status.ship_health[choice] = 0;
-    invoker_ptr->player_ship_status.ship_locs[choice].origin_row = new_loc_row;
-    invoker_ptr->player_ship_status.ship_locs[choice].origin_col = new_loc_col;
-    invoker_ptr->player_ship_status.ship_locs[choice].orientation = new_loc_ori;
+    invoker_ptr->player_ship_status.ship_locs[choice].origin_row = loc_vector.origin_row;
+    invoker_ptr->player_ship_status.ship_locs[choice].origin_col = loc_vector.origin_col;
+    invoker_ptr->player_ship_status.ship_locs[choice].orientation = loc_vector.orientation;
 }
 
 void SimpleSkip(int *turn_counter)
@@ -315,6 +295,7 @@ void MoveShip(server_t *server, uint8_t invoker_idx)
                 is_ship_sunk(invoker_ptr, choice));
 
     printf("Enter new location for your ship\n");
+    // Replacing this with the get_loc_vector API breaks the ability. Damned if I know why
     while (1)
     {
         new_loc_row = get_character("Row (A-J): ",
@@ -368,5 +349,20 @@ void MoveShip(server_t *server, uint8_t invoker_idx)
     invoker_ptr->player_ship_status.ship_locs[choice].origin_row = new_loc_row;
     invoker_ptr->player_ship_status.ship_locs[choice].origin_col = new_loc_col;
     invoker_ptr->player_ship_status.ship_locs[choice].orientation = new_loc_ori;
+    return;
+}
+
+void RevealPlayerPlacement(server_t *server, uint8_t invoker_idx)
+{
+    srand(time(0));
+    uint8_t chosen_player;
+    do {
+        chosen_player = rand() % server->playercnt;
+    } while (chosen_player == invoker_idx);
+
+    printf("REAVEALING %s's PLACEMENTS!!!\n", server->player_list[chosen_player]->playerName);
+    print_player_placements(server->player_list[chosen_player]->playerPlacement);
+    for (int i = 0; i < INT32_MAX / 8; i++);
+    clrscr();
     return;
 }

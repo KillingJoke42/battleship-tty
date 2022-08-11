@@ -39,4 +39,5 @@ void scalar_multiplication(char (*dest)[NUM_ROWS][NUM_COLS], char (*src)[NUM_ROW
 void scalar_swap(char dest[NUM_ROWS][NUM_COLS], char src[NUM_ROWS][NUM_COLS]);
 void swapchars(char *x, char *y);
 void swapuint8(uint8_t *x, uint8_t *y);
+void delay(int number_of_seconds);
 #endif

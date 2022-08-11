@@ -19,5 +19,6 @@ void DeployDecoy(server_t *server, uint8_t invoker_idx);
 void ChunkReveal(server_t *server, uint8_t invoker_idx);
 void GridSwap(server_t *server, uint8_t invoker_idx);
 void MoveShip(server_t *server, uint8_t invoker_idx);
+void RevealPlayerPlacement(server_t *server, uint8_t invoker_idx);
 
 #endif
