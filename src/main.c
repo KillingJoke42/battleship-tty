@@ -1,11 +1,12 @@
 #include <battleship.h>
 #include <playertools.h>
 #include <utils.h>
+#include <dedicatedGUI.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-int main(void)
+int main(int argc, char **argv)
 {
     // player_t *player = (player_t *)malloc(sizeof(player_t));
     // player_init(player);
@@ -29,6 +30,10 @@ int main(void)
     // {
     //     printf("Player %d name: %s\n", (i+1), server->player_list[i]->playerName);
     // }
+
+    gtk_app_init(argc, argv);
+    return 0;
+
     printf("battleship-tty\n");
     printf("Menu\n");
     printf("1) Start couch multiplayer\n");
