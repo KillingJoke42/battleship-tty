@@ -147,7 +147,10 @@ void couch_multiplayer(void)
         for (int i = 0; i < server->playercnt; i++)
         {
             if (game_over_base_case(server))
+            {
+                exit_free(server);
                 goto game_over;
+            }
             printf("%s's turn\n", server->player_list[i]->playerName);
             printf("What would you like to do?\n");
             printf("1) Fire on selected player\n");
@@ -223,4 +226,29 @@ uint8_t game_over_base_case(server_t *server)
         sunk_cnt += all_ships_sunk(server->player_list[i]);
 
     return (sunk_cnt == server->playercnt - 1);
+}
+
+void exit_free(server_t *server)
+{
+    for (int i = 0; i < server->playercnt; i++)
+    {
+        for (int j = 0; j < server->playercnt; j++)
+        {
+            if (j != server->player_list[i]->idx)
+            {
+                for (int k = 0; k < NUM_ROWS; k++)
+                {
+                    free(server->player_list[i]->oppn_info[j][k]);
+                }
+                free(server->player_list[i]->oppn_info[j]);
+            }
+        }
+        free(server->player_list[i]->oppn_info);
+        free(server->player_list[i]->playerName);
+        free(server->player_list[i]);
+    }
+    free(server->player_list);
+    free(server->server_name);
+    if (server->pass)
+        free(server->pass);
 }
