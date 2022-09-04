@@ -29,6 +29,7 @@ int main(void)
     // {
     //     printf("Player %d name: %s\n", (i+1), server->player_list[i]->playerName);
     // }
+
     printf("battleship-tty\n");
     printf("Menu\n");
     printf("1) Start couch multiplayer\n");
