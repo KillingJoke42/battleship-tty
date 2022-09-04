@@ -25,7 +25,7 @@ void create_server(server_t *server)
     server->player_list = (player_t **)malloc(sizeof(player_t *) * server->playercnt);
     
     printf("Protect server? (Y/N): ");
-    char choice;
+    char choice = 'N';
     while ((c = getchar()) != '\n' && c != EOF)
         choice = c;
     if (choice == 'Y')
@@ -49,17 +49,16 @@ void protect_server(server_t *server)
     tcsetattr(0, TCSANOW, &t);
 }
 
-void player_init(player_t *player, uint8_t players_cnt, uint8_t player_idx)
+void player_init(player_t *player, char *player_name, uint8_t players_cnt, uint8_t player_idx)
 {
     char c;
     char* name;
     
     player->idx = player_idx;
 
-    name = get_string("Enter player name: ");
-    player->playerName = name;
+    player->playerName = player_name;
 
-    player->oppn_info = (uint8_t ***)malloc(sizeof(uint8_t **) * players_cnt);
+    player->oppn_info = (uint8_t **)malloc(sizeof(uint8_t *) * players_cnt);
     for (int i = 0; i < players_cnt; i++)
     {
         if (i != player_idx)
@@ -71,7 +70,11 @@ void player_init(player_t *player, uint8_t players_cnt, uint8_t player_idx)
             player->oppn_info[i] = NULL;
     }
 
-    memset(player->playerPlacement, 0, sizeof(player->playerPlacement));
+    player->playerPlacement = alloc_dynamic_2d_char_arr(NUM_ROWS, NUM_COLS);
+    clear_2d_char_arr(player->playerPlacement, 0, NUM_ROWS, NUM_COLS);
+
+    player->streak = 0;
+    player->ability = UINT8_MAX;
 
     player->player_ship_status.ship_health[CARRIER] = 0;
     player->player_ship_status.ship_health[BATTLESHIP] = 0;
@@ -82,7 +85,7 @@ void player_init(player_t *player, uint8_t players_cnt, uint8_t player_idx)
 
 char select_a_player(server_t *server, uint8_t invoker_idx)
 {
-    char c, choice;
+    char c, choice = '\0';
     printf("Choose player\n");
 
     for (int j = 0; j < server->playercnt; j++)
@@ -108,7 +111,11 @@ void start_server(server_t *server)
 {
     char c;
     player_t *host = (player_t *)malloc(sizeof(player_t));
-    player_init(host, server->playercnt, 0);
+
+    char *name = get_string("Enter player name: ");
+    host->playerName = name;
+
+    player_init(host, name, server->playercnt, 0);
 
     server->player_list[0] = host;
     server->joined_players = 1;
@@ -131,7 +138,10 @@ void couch_multiplayer(void)
     {
         uint8_t rng_val = get_rng_val(rng_arr, &server_sz);
         player_t *new_player = (player_t *)malloc(sizeof(player_t));
-        player_init(new_player, server->playercnt, rng_val);
+
+        char *name = get_string("Enter player name: ");
+
+        player_init(new_player, name, server->playercnt, rng_val);
         server->player_list[rng_val] = new_player;
     }
 
@@ -156,16 +166,15 @@ void couch_multiplayer(void)
             printf("1) Fire on selected player\n");
             printf("2) View your map of selected player\n");
             printf("3) End round\n");
-            char c, choice;
+            if (server->player_list[i]->ability != UINT8_MAX)
+                printf("4) Invoke %s\n", ability_list[server->player_list[i]->ability]);
+            char c, choice = '\0';
             while ((c = getchar()) != '\n' && c != EOF)
                 choice = c;
             
             // Convert choice to switch case. Looks better
             switch (choice)
             {
-                case '0':
-                    RevealPlayerPlacement(server, i);
-                    break;
                 case '1':
                     if ((choice = select_a_player(server, i)) == -1)
                     {
@@ -200,11 +209,22 @@ void couch_multiplayer(void)
                 case '3':
                     break;
 
+                case '4':
+                    execute_ability(server, &i);
+                    goto ability_executed;
+                    break;
+
                 default:
                     printf("Invalid Choice\n");
                     i--;
                     break;
             }
+            uint8_t old_ability = server->player_list[i]->ability;
+            server->player_list[i]->ability = attach_ability(server->player_list[i]);
+            if (old_ability < server->player_list[i]->ability || 
+                (old_ability == UINT8_MAX && server->player_list[i]->ability != UINT8_MAX))
+                prompt_ability_gain(server->player_list[i]);
+ability_executed:
             enter_wait_prompt("Press ENTER to end round\n");
             clrscr();
         }
@@ -236,15 +256,12 @@ void exit_free(server_t *server)
         {
             if (j != server->player_list[i]->idx)
             {
-                for (int k = 0; k < NUM_ROWS; k++)
-                {
-                    free(server->player_list[i]->oppn_info[j][k]);
-                }
                 free(server->player_list[i]->oppn_info[j]);
             }
         }
         free(server->player_list[i]->oppn_info);
         free(server->player_list[i]->playerName);
+        free(server->player_list[i]->playerPlacement);
         free(server->player_list[i]);
     }
     free(server->player_list);

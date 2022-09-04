@@ -25,7 +25,7 @@ void ReviveCell(server_t * server, uint8_t invoker_idx, uint8_t ack)
                                 '0',
                                 '9') - '0';
 
-        shiptype = invoker_ptr->playerPlacement[ship_row][ship_col];
+        shiptype = arr_2d_get_char_val(invoker_ptr->playerPlacement, NUM_ROWS, ship_row, ship_col);
 
         if (shiptype >= 0)
             printf("Invalid cell. Is not a hit cell or no ship on selected cell");
@@ -34,27 +34,32 @@ void ReviveCell(server_t * server, uint8_t invoker_idx, uint8_t ack)
     switch (shiptype)
     {
         case -(CARRIER + 1):
-            invoker_ptr->playerPlacement[ship_row][ship_col] = (CARRIER + 1);
+            arr_2d_set_char_val(invoker_ptr->playerPlacement, NUM_ROWS, 
+                                ship_row, ship_col, (CARRIER+1));
             invoker_ptr->player_ship_status.ship_health[CARRIER]--;
             break;
 
         case -(DESTROYER + 1):
-            invoker_ptr->playerPlacement[ship_row][ship_col] = (DESTROYER + 1);
+            arr_2d_set_char_val(invoker_ptr->playerPlacement, NUM_ROWS, 
+                                ship_row, ship_col, (DESTROYER+1));
             invoker_ptr->player_ship_status.ship_health[DESTROYER]--;
             break; 
 
         case -(BATTLESHIP + 1):
-            invoker_ptr->playerPlacement[ship_row][ship_col] = (BATTLESHIP + 1);
+            arr_2d_set_char_val(invoker_ptr->playerPlacement, NUM_ROWS, 
+                                ship_row, ship_col, (BATTLESHIP+1));
             invoker_ptr->player_ship_status.ship_health[BATTLESHIP]--;
             break;
 
         case -(SUBMARINE + 1):
-            invoker_ptr->playerPlacement[ship_row][ship_col] = (SUBMARINE + 1);
+            arr_2d_set_char_val(invoker_ptr->playerPlacement, NUM_ROWS, 
+                                ship_row, ship_col, (SUBMARINE+1));
             invoker_ptr->player_ship_status.ship_health[SUBMARINE]--;
             break;
 
         case -(PATROL_BOAT + 1):
-            invoker_ptr->playerPlacement[ship_row][ship_col] = (PATROL_BOAT + 1);
+            arr_2d_set_char_val(invoker_ptr->playerPlacement, NUM_ROWS, 
+                                ship_row, ship_col, (PATROL_BOAT+1));
             invoker_ptr->player_ship_status.ship_health[PATROL_BOAT]--;
             break;
     }
@@ -65,7 +70,8 @@ void ReviveCell(server_t * server, uint8_t invoker_idx, uint8_t ack)
         {
             if (i != invoker_idx)
             {
-                server->player_list[i]->oppn_info[invoker_idx][ship_row][ship_col] = 'O';
+                arr_2d_set_val(server->player_list[i]->oppn_info[invoker_idx], NUM_ROWS,
+                                ship_row, ship_col, 'O');
             }
         }
         printf("%s has invoked REVIVE on %c-%d!\n", invoker_ptr->playerName, (ship_row + 'A'), ship_col);
@@ -108,7 +114,8 @@ void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack)
     {
         char new_row_offset = loc_vector.origin_row + ((loc_vector.orientation == 0) ? 0 : j);
         char new_col_offset = loc_vector.origin_col + ((loc_vector.orientation == 0) ? j : 0);
-        invoker_ptr->playerPlacement[new_row_offset][new_col_offset] = (choice + 1);
+        arr_2d_set_char_val(invoker_ptr->playerPlacement, NUM_ROWS,
+                            new_row_offset, new_col_offset, (choice+1));
     }
 
     // change the other player's notes about the invoker
@@ -123,7 +130,8 @@ void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack)
                     char old_ori = invoker_ptr->player_ship_status.ship_locs[choice].orientation;
                     char old_row = invoker_ptr->player_ship_status.ship_locs[choice].origin_row + ((old_ori == 0) ? 0 : j);
                     char old_col = invoker_ptr->player_ship_status.ship_locs[choice].origin_col + ((old_ori == 0) ? j : 0);
-                    server->player_list[i]->oppn_info[invoker_idx][old_row][old_col] = 'O';
+                    arr_2d_set_val(server->player_list[i]->oppn_info[invoker_idx], NUM_ROWS,
+                                old_row, old_col, 'O');
                 }
             }
         }
@@ -135,8 +143,13 @@ void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack)
     invoker_ptr->player_ship_status.ship_locs[choice].orientation = loc_vector.orientation;
 }
 
-void SimpleSkip(int *turn_counter)
+void SimpleSkip(server_t *server, int *turn_counter)
 {
+    if (*turn_counter == server->playercnt - 1)
+    {
+        *turn_counter = 0;
+        return;
+    }
     *(turn_counter) += 1;
     return;
 }
@@ -172,7 +185,7 @@ void DeployDecoy(server_t *server, uint8_t invoker_idx)
                                             '0',
                                             '9') - '0';
 
-        if (invoker_ptr->playerPlacement[decoy_row][decoy_col])
+        if (arr_2d_get_char_val(invoker_ptr->playerPlacement, NUM_ROWS, decoy_row, decoy_col))
         {
             printf("A ship has already been placed here.\n");
             continue;
@@ -180,7 +193,8 @@ void DeployDecoy(server_t *server, uint8_t invoker_idx)
         else
         {
             printf("%s has deployed a decoy!\n", invoker_ptr->playerName);
-            invoker_ptr->playerPlacement[decoy_row][decoy_col] = (DECOY + 1);
+            arr_2d_set_char_val(invoker_ptr->playerPlacement, NUM_ROWS,
+                                decoy_row, decoy_col, (DECOY+1));
             return;
         }
         break;
@@ -192,7 +206,7 @@ void ChunkReveal(server_t *server, uint8_t invoker_idx)
     srand(time(0));
     player_t *invoker_ptr = server->player_list[invoker_idx];
     char reveal_row, reveal_col;
-    char mask[NUM_ROWS][NUM_COLS] = {0};
+    char mask[NUM_ROWS * NUM_COLS] = {0};
 
     printf("Choose location to place reveal\n");
 
@@ -205,50 +219,51 @@ void ChunkReveal(server_t *server, uint8_t invoker_idx)
                                         '0',
                                         '9') - '0';
 
-    mask[reveal_row][reveal_col] = 1;
+    arr_2d_set_char_val(mask, NUM_ROWS, reveal_row, reveal_col, 1);
     uint8_t mask_ori = (rand() % 4);
     switch (mask_ori)
     {
         case UPLEFT:
-            mask[reveal_row - 1][reveal_col] = 1;
-            mask[reveal_row][reveal_col - 1] = 1;
-            mask[reveal_row - 1][reveal_col - 1] = 1;
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row-1, reveal_col, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row, reveal_col-1, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row-1, reveal_col-1, 1);
             break;
 
         case UPRIGHT:
-            mask[reveal_row - 1][reveal_col] = 1;
-            mask[reveal_row][reveal_col + 1] = 1;
-            mask[reveal_row - 1][reveal_col + 1] = 1;
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row-1, reveal_col, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row, reveal_col+1, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row-1, reveal_col+1, 1);
             break;
 
         case DOWNLEFT:
-            mask[reveal_row + 1][reveal_col] = 1;
-            mask[reveal_row][reveal_col - 1] = 1;
-            mask[reveal_row + 1][reveal_col - 1] = 1;
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row+1, reveal_col, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row, reveal_col-1, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row+1, reveal_col-1, 1);
             break;
 
         case DOWNRIGHT:
-            mask[reveal_row + 1][reveal_col] = 1;
-            mask[reveal_row][reveal_col + 1] = 1;
-            mask[reveal_row + 1][reveal_col + 1] = 1;
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row+1, reveal_col, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row, reveal_col+1, 1);
+            arr_2d_set_char_val(mask, NUM_ROWS, reveal_row+1, reveal_col+1, 1);
             break;
     }
 
-    scalar_multiplication(&mask, &server->player_list[invoker_idx]->playerPlacement, 1);
+    scalar_multiplication(mask, invoker_ptr->playerPlacement, 1);
     // print_player_placements(mask);
-    printf("  ");
-    for (int i = 0; i < NUM_COLS; i++)
-        printf("%d ", i);
-    printf("\n");
-    for (int i = 0; i < NUM_ROWS; i++)
-    {
-        printf("%c ", i + 'A');
-        for (int j = 0; j < NUM_COLS; j++)
-        {
-            printf("%c ", mask[i][j]);
-        }
-        printf("\n");
-    }
+    // printf("  ");
+    // for (int i = 0; i < NUM_COLS; i++)
+    //     printf("%d ", i);
+    // printf("\n");
+    // for (int i = 0; i < NUM_ROWS; i++)
+    // {
+    //     printf("%c ", i + 'A');
+    //     for (int j = 0; j < NUM_COLS; j++)
+    //     {
+    //         printf("%c ", mask[i][j]);
+    //     }
+    //     printf("\n");
+    // }
+    print_player_placements(mask, NUM_ROWS, NUM_COLS);
     return;
 }
 
@@ -263,7 +278,7 @@ void GridSwap(server_t *server, uint8_t invoker_idx)
 
     player_t *invoker_ptr = server->player_list[invoker_idx];
     player_t *chosen_player = server->player_list[rng_player];
-    scalar_swap(invoker_ptr->playerPlacement, chosen_player->playerPlacement);
+    scalar_swap(invoker_ptr->playerPlacement, chosen_player->playerPlacement, NUM_ROWS, NUM_COLS);
 }
 
 void MoveShip(server_t *server, uint8_t invoker_idx)
@@ -325,8 +340,8 @@ void MoveShip(server_t *server, uint8_t invoker_idx)
         char old_col = invoker_ptr->player_ship_status.ship_locs[choice].origin_col + ((old_ori == 0) ? i : 0);
         char new_row = new_loc_row + ((new_loc_ori == 0) ? 0 : i);
         char new_col = new_loc_col + ((new_loc_ori == 0) ? i : 0); 
-        swapchars(&invoker_ptr->playerPlacement[new_row][new_col],
-                    &invoker_ptr->playerPlacement[old_row][old_col]);
+        swapchars((invoker_ptr->playerPlacement + (NUM_ROWS*new_row) + new_col),
+                    (invoker_ptr->playerPlacement+ (NUM_ROWS*old_row) + old_col));
     }
 
     for (int i = 0; i < server->playercnt; i++)
@@ -340,8 +355,8 @@ void MoveShip(server_t *server, uint8_t invoker_idx)
                 char old_col = invoker_ptr->player_ship_status.ship_locs[choice].origin_col + ((old_ori == 0) ? j : 0);
                 char new_row = new_loc_row + ((new_loc_ori == 0) ? 0 : j);
                 char new_col = new_loc_col + ((new_loc_ori == 0) ? j : 0); 
-                swapuint8(&server->player_list[i]->oppn_info[invoker_idx][new_row][new_col],
-                            &server->player_list[i]->oppn_info[invoker_idx][old_row][old_col]);
+                swapuint8((server->player_list[i]->oppn_info[invoker_idx]+(NUM_ROWS*new_row)+new_col),
+                            (server->player_list[i]->oppn_info[invoker_idx]+(NUM_ROWS*old_row)+old_col));
             }
         }
     }
@@ -361,8 +376,90 @@ void RevealPlayerPlacement(server_t *server, uint8_t invoker_idx)
     } while (chosen_player == invoker_idx);
 
     printf("REAVEALING %s's PLACEMENTS!!!\n", server->player_list[chosen_player]->playerName);
-    print_player_placements(server->player_list[chosen_player]->playerPlacement);
+    print_player_placements(server->player_list[chosen_player]->playerPlacement, NUM_ROWS, NUM_COLS);
     for (int i = 0; i < INT32_MAX / 8; i++);
     clrscr();
+    return;
+}
+
+uint8_t attach_ability(player_t *player)
+{
+    switch (player->streak)
+    {
+        case 3:
+            if (player->ability == UINT8_MAX)
+                return (rand() % (NUM_THREE_STREAK));
+            break;
+
+        case 5:
+            if (player->ability < NUM_THREE_STREAK)
+                return (rand() % ((NUM_FIVE_STREAK - 1) + 1 - NUM_THREE_STREAK) + NUM_THREE_STREAK);
+            break;
+
+        case 7:
+            if (player->ability < NUM_FIVE_STREAK)
+                return (player->ability = rand() % ((NUM_SEVEN_STREAK - 1) + 1 - NUM_FIVE_STREAK) + NUM_FIVE_STREAK);
+            break;
+
+        default:
+            return player->ability;
+    }
+
+    return UINT8_MAX;
+}
+
+void prompt_ability_gain(player_t *player)
+{
+    printf("%s had gained %s!\n", player->playerName, ability_list[player->ability]);
+}
+
+void execute_ability(server_t *server, int *invoker_idx)
+{
+    player_t *invoker_ptr = server->player_list[*invoker_idx];
+    uint8_t ability_to_invoke = invoker_ptr->ability;
+    invoker_ptr->ability = UINT8_MAX;
+    invoker_ptr->streak = 0;
+    switch (ability_to_invoke)
+    {
+        case SIMPLE_SKIP:
+            SimpleSkip(server, invoker_idx);
+            break;
+
+        case REVIVE_CELL:
+            ReviveCell(server, *invoker_idx, 1);
+            break;
+
+        case RANDOM_CELL_REVEAL:
+            RandomCellReveal(server);
+            break;
+
+        case MOVE_SHIP:
+            MoveShip(server, *invoker_idx);
+            break;
+
+        case CHUNK_REVEAL:
+            ChunkReveal(server, *invoker_idx);
+            break;
+
+        case DEPLOY_DECOY:
+            DeployDecoy(server, *invoker_idx);
+            break;
+
+        case REVIVE_SHIP:
+            ReviveShip(server, *invoker_idx, 1);
+            break;
+
+        case GRID_SWAP:
+            GridSwap(server, *invoker_idx);
+            break;
+
+        case REVEAL_PLAYER_PLACEMENT:
+            RevealPlayerPlacement(server, *invoker_idx);
+            break;
+
+        default:
+            break;
+    }
+
     return;
 }

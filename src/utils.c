@@ -28,20 +28,23 @@ char* get_string(char* prompt)
     uint8_t namelen = 1;
     char *str = (char *)malloc(sizeof(char));
 
-    printf("%s", prompt);
-    while ((c = getchar()) != '\n' && c != EOF)
+    while (namelen == 1)
     {
-        str[namelen++ - 1] = c;
-        str = realloc(str, sizeof(char) * (namelen));
+        printf("%s", prompt);
+        while ((c = getchar()) != '\n' && c != EOF)
+        {
+            str[namelen++ - 1] = c;
+            str = realloc(str, sizeof(char) * (namelen));
+        }
+        str[namelen - 1] = '\0';
     }
-    str[namelen - 1] = '\0';
     return str;
 }
 
 char get_character(char *info_prompt, char *err_prompt, char start, char end)
 {
     char c;
-    char ret;
+    char ret = '\0';
     do {
         printf("%s", info_prompt);
         while((c = getchar()) != '\n' && c != EOF)
@@ -52,28 +55,61 @@ char get_character(char *info_prompt, char *err_prompt, char start, char end)
     return ret;
 }
 
-uint8_t** alloc_dynamic_2d_arr(char num_rows, char num_cols)
+uint8_t* alloc_dynamic_2d_arr(char num_rows, char num_cols)
 {
-    uint8_t **arr = (uint8_t **)malloc(sizeof(uint8_t *) * num_rows);
-
-    for (int i = 0; i < num_rows; i++)
-    {
-        arr[i] = (uint8_t *)malloc(sizeof(uint8_t) * num_cols);
-    }
+    uint8_t *arr = (uint8_t *)malloc(sizeof(uint8_t) * num_rows * num_cols);
 
     return arr;
 }
 
-void clear_2d_arr(uint8_t **arr, uint8_t val, uint8_t num_rows, uint8_t num_cols)
+char* alloc_dynamic_2d_char_arr(char num_rows, char num_cols)
+{
+    char *arr = (char *)malloc(sizeof(char) * num_rows * num_cols);
+
+    return arr;
+}
+
+uint8_t arr_2d_get_val(uint8_t *arr, char num_rows, char row, char col)
+{
+    return arr[(num_rows * row) + col];
+}
+
+void arr_2d_set_val(uint8_t *arr, char num_rows, char row, char col, uint8_t val)
+{
+    arr[(num_rows * row) + col] = val;
+    return;
+}
+
+char arr_2d_get_char_val(char *arr, char num_rows, char row, char col)
+{
+    return arr[(num_rows * row) + col];
+}
+
+void arr_2d_set_char_val(char *arr, char num_rows, char row, char col, uint8_t val)
+{
+    arr[(num_rows * row) + col] = val;
+    return;
+}
+
+void clear_2d_arr(uint8_t *arr, uint8_t val, uint8_t num_rows, uint8_t num_cols)
 {
     for (int i = 0; i < num_rows; i++)
         for (int j = 0; j < num_cols; j++)
-            arr[i][j] = val;
+            arr[(num_rows * i) + j] = val;
             
     return;
 }
 
-void print_2d_dynamic_arr(uint8_t **arr, uint8_t num_rows, uint8_t num_cols)
+void clear_2d_char_arr(char *arr, uint8_t val, uint8_t num_rows, uint8_t num_cols)
+{
+    for (int i = 0; i < num_rows; i++)
+        for (int j = 0; j < num_cols; j++)
+            arr[(num_rows * i) + j] = val;
+            
+    return;
+}
+
+void print_2d_dynamic_arr(uint8_t *arr, uint8_t num_rows, uint8_t num_cols)
 {
     printf("  ");
     for (int format = 0; format < num_cols; format++)
@@ -84,7 +120,7 @@ void print_2d_dynamic_arr(uint8_t **arr, uint8_t num_rows, uint8_t num_cols)
         printf("%c ", row + 'A');
         for (int col = 0; col < num_cols; col++)
         {
-            printf("%c ", arr[row][col]);
+            printf("%c ", arr[(num_rows * row) + col]);
         }
         printf("\n");
     }
@@ -120,31 +156,33 @@ uint8_t get_rng_val(uint8_t *arr, uint8_t *sz)
     *(arr + *sz - 1) = temp;
 
     *(sz) = *(sz) - 1;
-    arr = realloc(arr, sizeof(uint8_t) * *(sz));
+    //`arr = realloc(arr, sizeof(uint8_t) * *(sz));
 
     return ret;
 }
 
-void scalar_multiplication(char (*dest)[NUM_ROWS][NUM_COLS], char (*src)[NUM_ROWS][NUM_COLS], uint8_t binarize)
+void scalar_multiplication(char *dest, char *src, uint8_t binarize)
 {
     for (int i = 0; i < NUM_ROWS; i++)
     {
         for (int j = 0; j < NUM_COLS; j++)
         {
-            (*dest)[i][j] = (binarize == 0) ? ((*dest)[i][j] * (*src)[i][j]) : (((*dest)[i][j] * (*src)[i][j]) ? '#' : '0');
+            char idx = (NUM_ROWS*i)+j;
+            *(dest+idx) = (binarize == 0) ? (*(dest+idx) * *(src+idx)) : ((*(dest+idx) * *(src+idx)) ? '#' : '0');
         }
     }
 }
 
-void scalar_swap(char dest[NUM_ROWS][NUM_COLS], char src[NUM_ROWS][NUM_COLS])
+void scalar_swap(char *dest, char *src, char num_rows, char num_cols)
 {
-    for (int i = 0; i < NUM_ROWS; i++)
+    for (int i = 0; i < num_rows; i++)
     {
-        for (int j = 0; j < NUM_COLS; j++)
+        for (int j = 0; j < num_cols; j++)
         {
-            dest[i][j] = dest[i][j] + src[i][j];
-            src[i][j] = dest[i][j] - src[i][j];
-            dest[i][j] = dest[i][j] - src[i][j];
+            char idx = (num_rows*i)+j;
+            dest[idx] = dest[idx] + src[idx];
+            src[idx] = dest[idx] - src[idx];
+            dest[idx] = dest[idx] - src[idx];
         }
     }
 }
