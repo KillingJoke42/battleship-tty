@@ -2,14 +2,14 @@ EXEC=./exec
 INCLUDE_DIR=./include
 CC=gcc
 CFLAGS=-I$(INCLUDE_DIR)
-# LINKER=-lncurses
+LINKER=-lsctp
 
 OBJ_DIR=./obj
 
-_HEADERS = morse_interpreter.h morse_data.h battleship.h playertools.h utils.h abilities.h
+_HEADERS = morse_interpreter.h morse_data.h battleship.h playertools.h utils.h abilities.h socket.h
 HEADERS = $(patsubst %,$(INCLUDE_DIR)/%,$(_HEADERS))
 
-_OBJ = main.o morse_interpreter.o battleship.o playertools.o utils.o abilities.o
+_OBJ = main.o morse_interpreter.o battleship.o playertools.o utils.o abilities.o socket.o
 OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 
 $(OBJ_DIR)/%.o: src/%.c $(HEADERS)

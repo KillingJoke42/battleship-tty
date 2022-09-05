@@ -1,5 +1,6 @@
 #include <battleship.h>
 #include <playertools.h>
+#include <socket.h>
 #include <utils.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -29,6 +30,9 @@ int main(void)
     // {
     //     printf("Player %d name: %s\n", (i+1), server->player_list[i]->playerName);
     // }
+
+    socket_create_server();
+    return 0;
 
     printf("battleship-tty\n");
     printf("Menu\n");
