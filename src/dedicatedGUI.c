@@ -1,8 +1,81 @@
 #include <dedicatedGUI.h>
 #include <playertools.h>
+#include <stdlib.h>
+#include <string.h>
 #include <gtk/gtk.h>
 
 static GtkApplication *app;
+GtkWidget *create_server_window = NULL;
+
+// GtkWidget **playerNameDialog;
+static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
+{
+  GtkWidget *dialog, *label, *content_area;
+  GtkDialogFlags flags;
+
+  flags = GTK_DIALOG_DESTROY_WITH_PARENT;
+  dialog = gtk_dialog_new_with_buttons ("ERROR",
+                                        parent,
+                                        flags,
+                                        ("OK"),
+                                        GTK_RESPONSE_NONE,
+                                        NULL);
+  content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+  label = gtk_label_new (message);
+
+  g_signal_connect_swapped (dialog,
+                            "response",
+                            G_CALLBACK (gtk_widget_destroy),
+                            dialog);
+
+  gtk_container_add (GTK_CONTAINER (content_area), label);
+  gtk_widget_show_all (dialog);
+}
+
+static void set_server_details(GtkWidget *widget, gpointer data)
+{
+  server_ctx_t *args = (server_ctx_t *)data;
+  server_t *server = args->server_ptr;
+  create_server_ctx_t *gui_args = (create_server_ctx_t *)args->data;
+
+  const char *text_from_name_entry = gtk_entry_get_text(GTK_ENTRY(gui_args->server_name_widget));
+  const char *text_from_playercnt_entry = gtk_entry_get_text(GTK_ENTRY(gui_args->server_playercnt_widget));
+  const char *text_from_pass_entry = gtk_entry_get_text(GTK_ENTRY(gui_args->server_password_widget));
+
+
+  if (!strlen(text_from_name_entry))
+  {
+    gtk_entry_blank_error_dialog(NULL, "Server name field cannot be blank!");
+  }
+
+  if (!strlen(text_from_playercnt_entry))
+  {
+    gtk_entry_blank_error_dialog(NULL, "Number of players field cannot be blank!");
+  }
+
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui_args->server_pass_enabled_widget)) == TRUE &&
+        !strlen(text_from_pass_entry))
+  {
+    gtk_entry_blank_error_dialog(NULL, "Server password field cannot be blank!");
+  }
+
+  uint8_t playercnt = atoi(text_from_playercnt_entry);
+  char *name = g_strdup(text_from_name_entry);
+  char *pass = g_strdup(text_from_pass_entry);
+
+  server->player_list = (player_t **)malloc(sizeof(player_t *) * playercnt);
+  server->server_name = name;
+  server->playercnt = playercnt;
+  
+  if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui_args->server_pass_enabled_widget)))
+  {
+    server->pass = pass;
+  }
+  else
+  {
+    server->pass = NULL;
+  }
+}
 
 static void hide_entry(GtkWidget* widget, gpointer data)
 {
@@ -14,20 +87,28 @@ static void hide_entry(GtkWidget* widget, gpointer data)
 
 static void back_to_main_action(GtkWidget* widget, gpointer data)
 {
-  gtk_window_close(GTK_WINDOW(gtk_application_get_active_window(app)));
+  gtk_widget_hide(GTK_WIDGET(gtk_application_get_active_window(app)));
   gtk_widget_show(GTK_WIDGET(data));
 }
 
 void destroy (GtkWidget* widget, gpointer data)
 {
-  g_application_quit(G_APPLICATION(data));
+  printf("Exiting...\n");
+  g_application_quit(G_APPLICATION(app));
 }
 
-static void start_couch_multiplayer(GtkWidget* widget, gpointer data)
+static void create_server_menu(GtkWidget* widget, gpointer data)
 {
+  server_t *server;
+
   gtk_widget_hide(GTK_WIDGET(data));
   
-  GtkWidget *create_server_window = gtk_application_window_new(app);
+  if (create_server_window != NULL)
+  {
+    gtk_widget_show(create_server_window);
+    return;
+  }
+  create_server_window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(create_server_window), "Create Server");
   gtk_window_set_default_size(GTK_WINDOW(create_server_window), 352, 240);
   gtk_window_set_position(GTK_WINDOW(create_server_window), GTK_WIN_POS_CENTER_ALWAYS);
@@ -74,6 +155,7 @@ static void start_couch_multiplayer(GtkWidget* widget, gpointer data)
   gtk_grid_attach(GTK_GRID(server_data_grid), password_entry, 1, 3, 1, 1);
   gtk_widget_set_halign(password_entry, GTK_ALIGN_END);
   gtk_widget_set_sensitive(password_entry, FALSE);
+  gtk_entry_set_visibility(GTK_ENTRY(password_entry), FALSE);
 
   g_signal_connect(G_OBJECT(protect_server_checkbutton), "clicked", G_CALLBACK(hide_entry), password_entry);
 
@@ -81,7 +163,17 @@ static void start_couch_multiplayer(GtkWidget* widget, gpointer data)
   gtk_grid_attach(GTK_GRID(server_data_grid), confirm_button, 0, 4, 1, 1);
   GtkWidget *back_to_main_button = gtk_button_new_with_label("Back to main menu");
   gtk_grid_attach(GTK_GRID(server_data_grid), back_to_main_button, 1, 4, 1, 1);
+
+  create_server_ctx_t *server_gui_ctx = (create_server_ctx_t *)malloc(sizeof(create_server_ctx_t));
+  server_gui_ctx->server_name_widget = server_name_entry;
+  server_gui_ctx->server_playercnt_widget = player_count_entry;
+  server_gui_ctx->server_password_widget = password_entry;
+  server_gui_ctx->server_pass_enabled_widget = protect_server_checkbutton;
+  server_ctx_t *server_and_gui_ctx = (server_ctx_t *)malloc(sizeof(server_ctx_t));
+  server_and_gui_ctx->server_ptr = server;
+  server_and_gui_ctx->data = server_gui_ctx;
   
+  g_signal_connect(G_OBJECT(confirm_button), "clicked", G_CALLBACK(set_server_details), server_and_gui_ctx);
   g_signal_connect(G_OBJECT(back_to_main_button), "clicked", G_CALLBACK(back_to_main_action), data);
 
   gtk_widget_show_all(create_server_window);
@@ -115,7 +207,7 @@ static void activate (GtkApplication* app, gpointer user_data)
   // gtk_container_add(GTK_CONTAINER(main_menu), couch_button);
   gtk_box_pack_start(GTK_BOX(main_menu), couch_button, FALSE, FALSE, 0);
   gtk_widget_set_size_request(couch_button, 200, 30);
-  g_signal_connect(G_OBJECT(couch_button), "clicked", G_CALLBACK(start_couch_multiplayer), window);
+  g_signal_connect(G_OBJECT(couch_button), "clicked", G_CALLBACK(create_server_menu), window);
 
   GtkWidget* lan_button = gtk_button_new_with_label("Start Local Game Server");
   // gtk_container_add(GTK_CONTAINER(main_menu), lan_button);

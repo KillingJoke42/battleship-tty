@@ -25,18 +25,18 @@ void phase_place_ships(player_t *player)
         {
             for (int j = 0; j < ship_sz_map[i]; j++)
             {
-                player->playerPlacement[loc_vector.origin_row][loc_vector.origin_col + j] = (i + 1);
+                arr_2d_set_char_val(player->playerPlacement, NUM_ROWS, loc_vector.origin_row, loc_vector.origin_col+j, (i+1));
             }
         }
         else
         {
             for (int j = 0; j < ship_sz_map[i]; j++)
             {
-                player->playerPlacement[loc_vector.origin_row + j][loc_vector.origin_col] = (i + 1);
+                arr_2d_set_char_val(player->playerPlacement, NUM_ROWS, loc_vector.origin_row+j, loc_vector.origin_col, (i+1));
             }
         }
 
-        print_player_placements(player->playerPlacement);
+        print_player_placements(player->playerPlacement, NUM_ROWS, NUM_COLS);
         enter_wait_prompt("Press ENTER to continue");
         clrscr();
     }
@@ -56,30 +56,30 @@ uint8_t find_arr_sum(char *arr, int range)
     return sum;
 }
 
-uint8_t find_vertical_sum(char arr[NUM_ROWS][NUM_COLS], char ship_row, char ship_col, int range)
+uint8_t find_vertical_sum(char *arr, char num_rows, char ship_row, char ship_col, int range)
 {
     uint8_t sum = 0;
 
     for (int i = 0; i < range; i++)
     {
-        sum += arr[ship_row + i][ship_col];
+        sum += arr[(num_rows * (ship_row + i)) + ship_col];
     }
 
     return sum;
 }
 
-void print_player_placements(char player_arr[NUM_ROWS][NUM_COLS])
+void print_player_placements(char *player_arr, char num_rows, char num_cols)
 {
     printf("  ");
-    for (int i = 0; i < NUM_COLS; i++)
+    for (int i = 0; i < num_cols; i++)
         printf("%d ", i);
     printf("\n");
-    for (int i = 0; i < NUM_ROWS; i++)
+    for (int i = 0; i < num_rows; i++)
     {
         printf("%c ", i + 'A');
-        for (int j = 0; j < NUM_COLS; j++)
+        for (int j = 0; j < num_cols; j++)
         {
-            printf("%d ", player_arr[i][j]);
+            printf("%d ", player_arr[(num_rows * i) + j]);
         }
         printf("\n");
     }
@@ -100,53 +100,60 @@ void phase_fire(player_t *attacker, player_t *being_attacked)
                             '0',
                             '9') - '0';
 
-    if (being_attacked->playerPlacement[ship_row][ship_col] <= 0)
+    if (arr_2d_get_char_val(being_attacked->playerPlacement, NUM_ROWS, ship_row, ship_col) <= 0)
     {
         printf("MISS\n");
-        if (attacker->oppn_info[being_attacked->idx][ship_row][ship_col] != 'X')
-            attacker->oppn_info[being_attacked->idx][ship_row][ship_col] = '-';
+        attacker->streak = 0;
+        if (arr_2d_get_val(attacker->oppn_info[being_attacked->idx], NUM_ROWS, ship_row, ship_col) != 'X')
+            arr_2d_set_val(attacker->oppn_info[being_attacked->idx], NUM_ROWS, ship_row, ship_col, '-');
     }
     else
     {
         printf("HIT\n");
-        switch (being_attacked->playerPlacement[ship_row][ship_col] - 1)
+        attacker->streak++;
+        switch (arr_2d_get_char_val(being_attacked->playerPlacement, NUM_ROWS, ship_row, ship_col) - 1)
         {
             case CARRIER:
                 being_attacked->player_ship_status.ship_health[CARRIER] += 1;
-                being_attacked->playerPlacement[ship_row][ship_col] = -(CARRIER + 1);
+                arr_2d_set_char_val(being_attacked->playerPlacement, NUM_ROWS,
+                                ship_row, ship_col, -(CARRIER+1));
                 if (is_ship_sunk(being_attacked, 0))
                     printf("Enemy Carrier Sunk\n");
                 break;
 
             case BATTLESHIP:
                 being_attacked->player_ship_status.ship_health[BATTLESHIP] += 1;
-                being_attacked->playerPlacement[ship_row][ship_col] = -(BATTLESHIP + 1);
+                arr_2d_set_char_val(being_attacked->playerPlacement, NUM_ROWS,
+                                ship_row, ship_col, -(BATTLESHIP+1));
                 if (is_ship_sunk(being_attacked, 1))
                     printf("Enemy Battleship Sunk\n");
                 break;
 
             case DESTROYER:
                 being_attacked->player_ship_status.ship_health[DESTROYER] += 1;
-                being_attacked->playerPlacement[ship_row][ship_col] = -(DESTROYER + 1);
+                arr_2d_set_char_val(being_attacked->playerPlacement, NUM_ROWS,
+                                ship_row, ship_col, -(DESTROYER+1));
                 if (is_ship_sunk(being_attacked, 2))
                     printf("Enemy Destroyer Sunk\n");
                 break;
                 
             case SUBMARINE:
                 being_attacked->player_ship_status.ship_health[SUBMARINE] += 1;
-                being_attacked->playerPlacement[ship_row][ship_col] = -(SUBMARINE + 1);
+                arr_2d_set_char_val(being_attacked->playerPlacement, NUM_ROWS,
+                                ship_row, ship_col, -(SUBMARINE+1));
                 if (is_ship_sunk(being_attacked, 3))
                     printf("Enemy Submarine Sunk\n");
                 break;
 
             case PATROL_BOAT:
                 being_attacked->player_ship_status.ship_health[PATROL_BOAT] += 1;
-                being_attacked->playerPlacement[ship_row][ship_col] = -(PATROL_BOAT + 1);
+                arr_2d_set_char_val(being_attacked->playerPlacement, NUM_ROWS,
+                                ship_row, ship_col, -(PATROL_BOAT+1));
                 if (is_ship_sunk(being_attacked, 4))
                     printf("Enemy Patrol Boat Sunk\n");
                 break;
         }
-        attacker->oppn_info[being_attacked->idx][ship_row][ship_col] = 'X';
+        arr_2d_set_val(attacker->oppn_info[being_attacked->idx], NUM_ROWS, ship_row, ship_col, 'X');
     }
 }
 
@@ -197,7 +204,7 @@ uint8_t check_availability(player_t *player, ship_loc_t loc_vector, uint8_t ship
     uint8_t ship_row = loc_vector.origin_row;
     uint8_t ship_col = loc_vector.origin_col;
     uint8_t ship_ori = loc_vector.orientation;
-    if (player->playerPlacement[ship_row][ship_col])
+    if (arr_2d_get_char_val(player->playerPlacement, NUM_ROWS, ship_row, ship_col))
     {
         printf("A ship has already been placed here.\n");
         return 0;
@@ -205,11 +212,13 @@ uint8_t check_availability(player_t *player, ship_loc_t loc_vector, uint8_t ship
 
     if ((ship_ori == 0 &&
         (ship_col + ship_sz > NUM_COLS ||
-        find_arr_sum(&(player->playerPlacement[ship_row][ship_col]), ship_sz))) || 
+        find_arr_sum((player->playerPlacement + (ship_row * NUM_ROWS) + ship_col), ship_sz))) || 
         (ship_ori == 1 &&
         (ship_row + ship_sz > NUM_ROWS ||
-        find_vertical_sum(player->playerPlacement, ship_row, ship_col, ship_sz))))
+        find_vertical_sum(player->playerPlacement, NUM_ROWS, ship_row, ship_col, ship_sz))))
     {
+        printf("arg1: %d, arg2: %d, arg3: %d\n", ship_ori == 1, ship_row + ship_sz > NUM_ROWS,
+                                                find_vertical_sum(player->playerPlacement, NUM_ROWS, ship_row, ship_col, ship_sz));
         printf("Cannot place ship here: invalid placement\n");
         return 0;
     }

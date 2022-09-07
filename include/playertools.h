@@ -29,9 +29,11 @@ typedef struct {
 typedef struct {
     char *playerName;
     uint8_t idx;
-    char playerPlacement[NUM_ROWS][NUM_COLS];
-    uint8_t ***oppn_info;
+    char *playerPlacement;
+    uint8_t **oppn_info;
     ship_status_t player_ship_status;
+    uint8_t streak;
+    uint8_t ability;
 } player_t;
 
 typedef struct {
@@ -44,13 +46,14 @@ typedef struct {
 
 void create_server(server_t *server);
 void protect_server(server_t *server);
-void player_init(player_t *player, uint8_t player_cnt, uint8_t player_idx);
+void player_init(player_t *player, char *player_init, uint8_t player_cnt, uint8_t player_idx);
 char select_a_player(server_t *server, uint8_t invoker_idx);
 void start_server(server_t *server);
 
 void couch_multiplayer(void);
 void lan_game(void);
 
+void exit_free(server_t *server);
 uint8_t game_over_base_case(server_t *server);
 
 #endif
