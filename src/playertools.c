@@ -145,6 +145,13 @@ void couch_multiplayer(void)
         server->player_list[rng_val] = new_player;
     }
 
+    for (int i = 0; i < server->playercnt - 1; i++)
+    {
+        server->player_list[i]->next_player = server->player_list[i+1];
+    }
+    server->player_list[server->playercnt - 1]->next_player =
+        server->player_list[0];
+
     for (int i = 0; i < server->playercnt; i++)
     {
         clrscr();
@@ -152,82 +159,83 @@ void couch_multiplayer(void)
         phase_place_ships(server->player_list[i]);
     }    
 
+    player_t *curr_turn = server->player_list[0];
     while (1)
     {
-        for (int i = 0; i < server->playercnt; i++)
+        if (game_over_base_case(server))
         {
-            if (game_over_base_case(server))
-            {
-                exit_free(server);
-                goto game_over;
-            }
-            printf("%s's turn\n", server->player_list[i]->playerName);
-            printf("What would you like to do?\n");
-            printf("1) Fire on selected player\n");
-            printf("2) View your map of selected player\n");
-            printf("3) End round\n");
-            if (server->player_list[i]->ability != UINT8_MAX)
-                printf("4) Invoke %s\n", ability_list[server->player_list[i]->ability]);
-            char c, choice = '\0';
-            while ((c = getchar()) != '\n' && c != EOF)
-                choice = c;
-            
-            // Convert choice to switch case. Looks better
-            switch (choice)
-            {
-                case '1':
-                    if ((choice = select_a_player(server, i)) == -1)
-                    {
-                        printf("Invalid Choice\n");
-                        i--;
-                        continue;
-                    }
-
-                    phase_fire(server->player_list[i], server->player_list[choice]);
-                    break;
-
-                case '2':
-                    if ((choice = select_a_player(server, i)) == -1)
-                    {
-                        printf("Invalid Choice\n");
-                        i--;
-                        continue;
-                    }
-
-                    clrscr();
-                    // Print API locked to static 2d arrs. Fix Please!!
-                    print_2d_dynamic_arr(server->player_list[i]->oppn_info[choice],
-                                        NUM_ROWS,
-                                        NUM_COLS);
-
-                    enter_wait_prompt("Press ENTER to continue\n");
-                    clrscr();
-                    i--;
-                    continue;
-                    break;
-
-                case '3':
-                    break;
-
-                case '4':
-                    execute_ability(server, &i);
-                    goto ability_executed;
-                    break;
-
-                default:
-                    printf("Invalid Choice\n");
-                    i--;
-                    break;
-            }
-            uint8_t old_ability = server->player_list[i]->ability;
-            server->player_list[i]->ability = attach_ability(server->player_list[i]);
-            if (old_ability < server->player_list[i]->ability || 
-                (old_ability == UINT8_MAX && server->player_list[i]->ability != UINT8_MAX))
-                prompt_ability_gain(server->player_list[i]);
-ability_executed:
-            enter_wait_prompt("Press ENTER to end round\n");
-            clrscr();
+            exit_free(server);
+            goto game_over;
         }
+        printf("%s's turn\n", curr_turn->playerName);
+        printf("What would you like to do?\n");
+        printf("1) Fire on selected player\n");
+        printf("2) View your map of selected player\n");
+        printf("3) End round\n");
+        if (curr_turn->ability != UINT8_MAX)
+            printf("4) Invoke %s\n", ability_list[curr_turn->ability]);
+        char c, choice = '\0';
+        while ((c = getchar()) != '\n' && c != EOF)
+            choice = c;
+        
+        // Convert choice to switch case. Looks better
+        switch (choice)
+        {
+            case '0':
+                SimpleSkip(&curr_turn);
+                goto ability_executed;
+                break;
+            case '1':
+                if ((choice = select_a_player(server, curr_turn->idx)) == -1)
+                {
+                    printf("Invalid Choice\n");
+                    goto no_next_turn;
+                }
+
+                phase_fire(curr_turn, server->player_list[choice]);
+                break;
+
+            case '2':
+                if ((choice = select_a_player(server, curr_turn->idx)) == -1)
+                {
+                    printf("Invalid Choice\n");
+                    goto no_next_turn;
+                }
+
+                clrscr();
+                // Print API locked to static 2d arrs. Fix Please!!
+                print_2d_dynamic_arr(curr_turn->oppn_info[choice],
+                                    NUM_ROWS,
+                                    NUM_COLS);
+
+                enter_wait_prompt("Press ENTER to continue\n");
+                clrscr();
+                goto no_next_turn;
+                break;
+
+            case '3':
+                break;
+
+            case '4':
+                execute_ability(server, curr_turn->idx, &curr_turn);
+                goto ability_executed;
+                break;
+
+            default:
+                printf("Invalid Choice\n");
+                goto no_next_turn;
+                break;
+        }
+        uint8_t old_ability = curr_turn->ability;
+        curr_turn->ability = attach_ability(curr_turn);
+        if (old_ability < curr_turn->ability || 
+            (old_ability == UINT8_MAX && curr_turn->ability != UINT8_MAX))
+            prompt_ability_gain(curr_turn);
+ability_executed:
+        curr_turn = curr_turn->next_player;
+no_next_turn:
+        enter_wait_prompt("Press ENTER to end round\n");
+        clrscr();
     }
 game_over:
     printf("GAME OVER\n");

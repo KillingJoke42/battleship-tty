@@ -143,14 +143,9 @@ void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack)
     invoker_ptr->player_ship_status.ship_locs[choice].orientation = loc_vector.orientation;
 }
 
-void SimpleSkip(server_t *server, int *turn_counter)
+void SimpleSkip(player_t **cur_pos)
 {
-    if (*turn_counter == server->playercnt - 1)
-    {
-        *turn_counter = 0;
-        return;
-    }
-    *(turn_counter) += 1;
+    *cur_pos = (*cur_pos)->next_player;
     return;
 }
 
@@ -413,20 +408,20 @@ void prompt_ability_gain(player_t *player)
     printf("%s had gained %s!\n", player->playerName, ability_list[player->ability]);
 }
 
-void execute_ability(server_t *server, int *invoker_idx)
+void execute_ability(server_t *server, uint8_t invoker_idx, player_t **curr_pos)
 {
-    player_t *invoker_ptr = server->player_list[*invoker_idx];
+    player_t *invoker_ptr = server->player_list[invoker_idx];
     uint8_t ability_to_invoke = invoker_ptr->ability;
     invoker_ptr->ability = UINT8_MAX;
     invoker_ptr->streak = 0;
     switch (ability_to_invoke)
     {
         case SIMPLE_SKIP:
-            SimpleSkip(server, invoker_idx);
+            SimpleSkip(curr_pos);
             break;
 
         case REVIVE_CELL:
-            ReviveCell(server, *invoker_idx, 1);
+            ReviveCell(server, invoker_idx, 1);
             break;
 
         case RANDOM_CELL_REVEAL:
@@ -434,27 +429,27 @@ void execute_ability(server_t *server, int *invoker_idx)
             break;
 
         case MOVE_SHIP:
-            MoveShip(server, *invoker_idx);
+            MoveShip(server, invoker_idx);
             break;
 
         case CHUNK_REVEAL:
-            ChunkReveal(server, *invoker_idx);
+            ChunkReveal(server, invoker_idx);
             break;
 
         case DEPLOY_DECOY:
-            DeployDecoy(server, *invoker_idx);
+            DeployDecoy(server, invoker_idx);
             break;
 
         case REVIVE_SHIP:
-            ReviveShip(server, *invoker_idx, 1);
+            ReviveShip(server, invoker_idx, 1);
             break;
 
         case GRID_SWAP:
-            GridSwap(server, *invoker_idx);
+            GridSwap(server, invoker_idx);
             break;
 
         case REVEAL_PLAYER_PLACEMENT:
-            RevealPlayerPlacement(server, *invoker_idx);
+            RevealPlayerPlacement(server, invoker_idx);
             break;
 
         default:

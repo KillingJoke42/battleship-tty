@@ -26,7 +26,9 @@ typedef struct {
     ship_loc_t ship_locs[NUM_SHIPS];
 } ship_status_t;
 
-typedef struct {
+typedef struct player player_t;
+
+struct player{
     char *playerName;
     uint8_t idx;
     char *playerPlacement;
@@ -34,7 +36,8 @@ typedef struct {
     ship_status_t player_ship_status;
     uint8_t streak;
     uint8_t ability;
-} player_t;
+    player_t *next_player;
+};
 
 typedef struct {
     char* server_name;
