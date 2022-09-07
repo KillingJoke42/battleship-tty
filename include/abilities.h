@@ -39,7 +39,7 @@ static char ability_list[][24] = {"Simple Skip",
 
 void ReviveCell(server_t *server, uint8_t invoker_idx, uint8_t ack);
 void ReviveShip(server_t *server, uint8_t invoker_idx, uint8_t ack);
-void SimpleSkip(server_t *server, int *turn_counter);
+void SimpleSkip(player_t **cur_pos);
 void RandomCellReveal(server_t *server);
 void DeployDecoy(server_t *server, uint8_t invoker_idx);
 void ChunkReveal(server_t *server, uint8_t invoker_idx);
@@ -49,5 +49,5 @@ void RevealPlayerPlacement(server_t *server, uint8_t invoker_idx);
 
 uint8_t attach_ability(player_t *player);
 void prompt_ability_gain(player_t *player);
-void execute_ability(server_t *server, int *invoker_idx);
+void execute_ability(server_t *server, uint8_t invoker_idx, player_t **cur_pos);
 #endif
