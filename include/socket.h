@@ -4,5 +4,6 @@
 #define PORT 8080
 
 int socket_create_server(void);
+int socket_create_client(void);
 
 #endif

@@ -31,7 +31,15 @@ int main(void)
     //     printf("Player %d name: %s\n", (i+1), server->player_list[i]->playerName);
     // }
 
-    socket_create_server();
+    printf("1) Server\n");
+    printf("2) Client\n");
+    char serve = getchar();
+    if (serve == '1')
+        socket_create_server();
+    else if (serve == '2')
+        socket_create_client();
+    else
+        printf("FUCK OFF!\n");
     return 0;
 
     printf("battleship-tty\n");

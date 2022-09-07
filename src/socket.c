@@ -9,60 +9,85 @@
 
 int socket_create_server(void)
 {
-    int serverfd, newsock, valread;
-    struct sockaddr_in address;
-    int addrlen = sizeof(address);
-    char buffer[1024] = {0};
-    char hello[] = "Hello from server";
-    int opt = 1;
+    int socket_desc, sockaddr_sz, new_socket, yes;
+    struct sockaddr_in server, client;
+    char *message = "Hello, Client!\n";
 
-    if ((serverfd = socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    socket_desc = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (socket_desc == -1)
     {
-        printf("Failed to create server socket\n");
+        printf("ERROR: Unable to create socket\n");
         exit(1);
     }
-    printf("Socket Created\n");
 
-    if (setsockopt(serverfd, SOL_SOCKET, 
-                    SO_REUSEADDR | SO_REUSEPORT, 
-                    &opt, sizeof(opt)))
+    if (setsockopt(socket_desc, SOL_SOCKET, SO_REUSEADDR, &yes,
+                    sizeof(yes)) < 0)
     {
-        printf("Failed to force socket to port\n");
-        exit(2);
-    }
-    address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_ANY;
-    address.sin_port = htons(PORT);
-    printf("Socket forced to 8080\n");
-
-    if (bind(serverfd, (struct sockaddr *)&address, sizeof(address)) == -1)
-    {
-        printf("Bind failed\n");
-        exit(3);
-    }
-    printf("Socket bind successful\n");
-    printf("Listening for connections.....\n");
-
-    if (listen(serverfd, 3) == -1)
-    {
-        printf("Listen Failed\n");
-        exit(4);
+        printf("ERROR: Unable to make socket reusable\n");
+        exit(1);
     }
 
-    if ((newsock = accept(serverfd, 
-                        (struct sockaddr *)&address, 
-                        (socklen_t *)&addrlen)) == -1)
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = INADDR_ANY;
+    server.sin_port = htons( 8888 );
+
+    if (bind(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0)
     {
-        printf("Accept failure\n");
-        exit(5);
+        printf("ERROR: Bind Failed\n");
+        exit(1);
     }
-    printf("Connection accepted\n");
 
-    valread = read(serverfd, buffer, 1024);
-    printf("%s\n", buffer);
-    send(serverfd, hello, strlen(hello), 0);
-    printf("Message Sent\n");
+    printf("Waiting for incoming connections....");
 
-    close(newsock);
-    shutdown(serverfd, SHUT_RDWR);
+    listen(socket_desc, 3);
+
+    sockaddr_sz = sizeof(struct sockaddr_in);
+    new_socket = accept(socket_desc, (struct sockaddr *)&client, (socklen_t *)&sockaddr_sz);
+    if (new_socket < 0)
+    {
+        printf("ERROR: Accept connection Failed\n");
+        exit(1);
+    }
+
+    printf("Connection Accpeted\n");
+    printf("Received connection from %s at port %d\n", 
+            inet_ntoa(client.sin_addr), ntohs(client.sin_port));
+
+    write(new_socket, message, strlen(message));
+    close(new_socket);
+    close(socket_desc);
+    return 0;
+}
+
+int socket_create_client(void)
+{
+    int socket_desc;
+    struct sockaddr_in server, client;
+    char server_reply[2048];
+
+    if ((socket_desc = socket(AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+        printf("ERROR: Socket Create Failed\n");
+        exit(1);
+    }
+
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+    server.sin_family = AF_INET;
+    server.sin_port = htons( 8888 );
+
+    if (connect(socket_desc, (struct sockaddr *)&server, sizeof(server)) < 0)
+    {
+        printf("ERROR: connect failed\n");
+        exit(1);
+    }
+
+    printf("Connected!\n");
+
+    if (recv(socket_desc, server_reply, sizeof(server_reply), 0) < 0)
+    {
+        printf("ERROR: receive failed\n");
+        exit(1);
+    }
+    printf("%s\n", server_reply);
 }
