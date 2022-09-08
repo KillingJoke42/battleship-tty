@@ -46,7 +46,7 @@ typedef struct {
 
 void create_server(server_t *server);
 void protect_server(server_t *server);
-void player_init(player_t *player, char *player_init, uint8_t player_cnt, uint8_t player_idx);
+void player_init(player_t *player, char *player_name, uint8_t player_cnt, uint8_t player_idx);
 char select_a_player(server_t *server, uint8_t invoker_idx);
 void start_server(server_t *server);
 

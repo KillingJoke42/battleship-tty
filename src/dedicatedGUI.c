@@ -1,13 +1,18 @@
 #include <dedicatedGUI.h>
 #include <playertools.h>
+#include <utils.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <gtk/gtk.h>
 
 static GtkApplication *app;
 GtkWidget *create_server_window = NULL;
 
-// GtkWidget **playerNameDialog;
+static server_t *server;
+char *name;
+GtkWidget **playerNameDialog, **prepPhaseButtonGrid;
+
 static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
 {
   GtkWidget *dialog, *label, *content_area;
@@ -32,38 +37,159 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
   gtk_widget_show_all (dialog);
 }
 
+static void preparation_phase(void)
+{
+  GtkWidget *prep_phase_window = gtk_application_window_new(app);
+  gtk_window_set_title(GTK_WINDOW(prep_phase_window), "Preparation Phase");
+  gtk_window_set_default_size(GTK_WINDOW(prep_phase_window), 640, 480);
+  gtk_window_set_position(GTK_WINDOW(prep_phase_window), GTK_WIN_POS_CENTER_ALWAYS);
+  g_signal_connect(G_OBJECT(prep_phase_window), "destroy", G_CALLBACK(destroy), app);
+
+  GtkWidget *prep_phase_gridbox = gtk_grid_new();
+  
+  char *label_info = "Preparation Phase for "
+  char buffer[strlen(label_info)+strlen(server->player_list[0]->playerName)+1];
+  snprintf(buffer, sizeof(buffer), "%s %s", label_info, server->player_list[0]->playerName);
+  GtkWidget *prep_phase_label = gtk_label_new(buffer);
+  gtk_grid_attach(GTK_GRID(prep_phase_gridbox), prep_phase_label, 0, 0, 1, 0);
+
+  GtkWidget *prep_phase_button_gridbox = gtk_grid_new();
+  gtk_grid_set_row_homogeneous(GTK_GRID(prep_phase_button_gridbox), TRUE);
+  gtk_grid_set_column_homogeneous(GTK_GRID(prep_phase_button_gridbox), TRUE);
+  prepPhaseButtonGrid = (GtkWidget **)malloc(sizeof(GtkWidget *) * NUM_ROWS * NUM_COLS);
+  for (int i = 0; i < NUM_ROWS; i++)
+  {
+    for (int j = 0; j < NUM_COLS; j++)
+    {
+      prepPhaseButtonGrid[(i*NUM_ROWS)+j] = gtk_button_new();
+      gtk_grid_attach(GTK_GRID(prep_phase_button_gridbox), prepPhaseButtonGrid[(i*NUM_ROWS)+j], j, i, 0, 0);
+    }
+  }
+}
+
+static void initialize_players(GtkWidget *widget, gpointer data)
+{
+  uint8_t error_flag = 1;
+  for (int i = 0; i < server->playercnt; i++)
+  {
+    if (!strlen(gtk_entry_get_text(GTK_ENTRY(playerNameDialog[i]))))
+    {
+      gtk_entry_blank_error_dialog(NULL, "ERROR: Names cannot be blank!");
+      error_flag = 0;
+      break;
+    }
+    for (int j = i+1; j < server->playercnt; j++)
+    {
+      if (!strcmp(gtk_entry_get_text(GTK_ENTRY(playerNameDialog[i])), gtk_entry_get_text(GTK_ENTRY(playerNameDialog[j]))))
+      {
+        gtk_entry_blank_error_dialog(NULL, "ERROR: Names cannot be same!");
+        error_flag = 0;
+        break;
+      }
+    }
+  }
+
+  if (!error_flag)
+    return;
+
+  server->player_list = (player_t **)malloc(sizeof(player_t *) * server->playercnt);
+  uint8_t *rng_arr = alloc_rng_arr(server->playercnt);
+  uint8_t server_sz = server->playercnt;
+  for (int i = 0; i < server->playercnt; i++)
+  {
+    uint8_t rng_val = get_rng_val(rng_arr, &server_sz);
+    server->player_list[rng_val] = (player_t *)malloc(sizeof(player_t));
+    name = g_strdup(gtk_entry_get_text(GTK_ENTRY(playerNameDialog[i])));
+    player_init(server->player_list[rng_val], name, server->playercnt, rng_val);
+  }
+
+  for (int i = 0; i < server->playercnt; i++)
+  {
+    printf("player %s\n", server->player_list[i]->playerName);
+  }
+
+  free(rng_arr);
+  free(playerNameDialog);
+  gtk_widget_hide(create_server_window);
+  gtk_widget_destroy(GTK_WIDGET(data));
+}
+
+static void get_player_names(void)
+{
+  uint8_t err_flag = 1;
+
+  playerNameDialog = (GtkWidget **)malloc(sizeof(GtkWidget *) * server->playercnt);
+
+  GtkWidget *get_player_names_window = gtk_application_window_new(app);
+  gtk_window_set_title(GTK_WINDOW(get_player_names_window), "Initialize Players");
+  gtk_window_set_position(GTK_WINDOW(get_player_names_window), GTK_WIN_POS_CENTER_ALWAYS);
+  gtk_widget_set_size_request(get_player_names_window, 640, 480);
+
+  GtkWidget *get_player_names_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+  gtk_container_add(GTK_CONTAINER(get_player_names_window), get_player_names_vbox);
+  gtk_widget_set_valign(get_player_names_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(get_player_names_vbox, GTK_ALIGN_CENTER);
+
+  GtkWidget *get_player_names_label = gtk_label_new("Enter Player Names");
+  gtk_box_pack_start(GTK_BOX(get_player_names_vbox), get_player_names_label, FALSE, FALSE, 0);
+
+
+  for (int i = 0; i < server->playercnt; i++)
+  {
+    GtkWidget *entry = gtk_entry_new();
+    playerNameDialog[i] = entry;
+    gtk_box_pack_start(GTK_BOX(get_player_names_vbox), entry, FALSE, FALSE, 0);
+  }
+
+  GtkWidget *get_player_names_button = gtk_button_new_with_label("OK");
+  gtk_box_pack_start(GTK_BOX(get_player_names_vbox), get_player_names_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(get_player_names_button), "clicked", G_CALLBACK(initialize_players), get_player_names_window);
+
+  gtk_widget_show_all(get_player_names_window);
+}
+
 static void set_server_details(GtkWidget *widget, gpointer data)
 {
-  server_ctx_t *args = (server_ctx_t *)data;
-  server_t *server = args->server_ptr;
-  create_server_ctx_t *gui_args = (create_server_ctx_t *)args->data;
+  create_server_ctx_t *gui_args = (create_server_ctx_t *)data;
+  uint8_t err_flag = 1;
+  server = (server_t *)malloc(sizeof(server_t));
 
   const char *text_from_name_entry = gtk_entry_get_text(GTK_ENTRY(gui_args->server_name_widget));
   const char *text_from_playercnt_entry = gtk_entry_get_text(GTK_ENTRY(gui_args->server_playercnt_widget));
   const char *text_from_pass_entry = gtk_entry_get_text(GTK_ENTRY(gui_args->server_password_widget));
 
-
   if (!strlen(text_from_name_entry))
   {
     gtk_entry_blank_error_dialog(NULL, "Server name field cannot be blank!");
+    printf("ERROR: Field cannot be blank!\n");
+    err_flag = 0;
   }
 
   if (!strlen(text_from_playercnt_entry))
   {
     gtk_entry_blank_error_dialog(NULL, "Number of players field cannot be blank!");
+    printf("ERROR: Field cannot be blank!\n");
+    err_flag = 0;
   }
 
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui_args->server_pass_enabled_widget)) == TRUE &&
         !strlen(text_from_pass_entry))
   {
     gtk_entry_blank_error_dialog(NULL, "Server password field cannot be blank!");
+    err_flag = 0;
+    printf("ERROR: Field cannot be blank\n");
+  }
+
+  if (!err_flag)
+  {
+    return;
   }
 
   uint8_t playercnt = atoi(text_from_playercnt_entry);
   char *name = g_strdup(text_from_name_entry);
   char *pass = g_strdup(text_from_pass_entry);
 
-  server->player_list = (player_t **)malloc(sizeof(player_t *) * playercnt);
+  // server->player_list = (player_t **)malloc(sizeof(player_t *) * playercnt);
   server->server_name = name;
   server->playercnt = playercnt;
   
@@ -75,6 +201,9 @@ static void set_server_details(GtkWidget *widget, gpointer data)
   {
     server->pass = NULL;
   }
+
+  free(gui_args);
+  get_player_names();
 }
 
 static void hide_entry(GtkWidget* widget, gpointer data)
@@ -99,8 +228,6 @@ void destroy (GtkWidget* widget, gpointer data)
 
 static void create_server_menu(GtkWidget* widget, gpointer data)
 {
-  server_t *server;
-
   gtk_widget_hide(GTK_WIDGET(data));
   
   if (create_server_window != NULL)
@@ -169,11 +296,8 @@ static void create_server_menu(GtkWidget* widget, gpointer data)
   server_gui_ctx->server_playercnt_widget = player_count_entry;
   server_gui_ctx->server_password_widget = password_entry;
   server_gui_ctx->server_pass_enabled_widget = protect_server_checkbutton;
-  server_ctx_t *server_and_gui_ctx = (server_ctx_t *)malloc(sizeof(server_ctx_t));
-  server_and_gui_ctx->server_ptr = server;
-  server_and_gui_ctx->data = server_gui_ctx;
   
-  g_signal_connect(G_OBJECT(confirm_button), "clicked", G_CALLBACK(set_server_details), server_and_gui_ctx);
+  g_signal_connect(G_OBJECT(confirm_button), "clicked", G_CALLBACK(set_server_details), server_gui_ctx);
   g_signal_connect(G_OBJECT(back_to_main_button), "clicked", G_CALLBACK(back_to_main_action), data);
 
   gtk_widget_show_all(create_server_window);

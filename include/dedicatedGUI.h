@@ -5,7 +5,7 @@
 #include <gtk/gtk.h>
 
 typedef struct {
-    server_t *server_ptr;
+    server_t **server_ptr;
     gpointer data;
 } server_ctx_t;
 
