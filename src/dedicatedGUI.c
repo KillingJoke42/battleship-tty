@@ -1,4 +1,5 @@
 #include <dedicatedGUI.h>
+#include <battleship.h>
 #include <playertools.h>
 #include <utils.h>
 #include <stdlib.h>
@@ -12,6 +13,17 @@ GtkWidget *create_server_window = NULL;
 static server_t *server;
 char *name;
 GtkWidget **playerNameDialog, **prepPhaseButtonGrid;
+
+GtkWidget *activeButton;
+GtkCssProvider *css = NULL;
+
+gint orientation = 0;
+
+void destroy (GtkWidget* widget, gpointer data)
+{
+  printf("Exiting...\n");
+  g_application_quit(G_APPLICATION(app));
+}
 
 static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
 {
@@ -37,6 +49,31 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
   gtk_widget_show_all (dialog);
 }
 
+static void place_ship_on_grid(GtkWidget* widget, gpointer data)
+{
+  ship_loc_t *ship_origin = (ship_loc_t *)data;
+  int ship_origin_row = ship_origin->origin_row;
+  int ship_origin_col = ship_origin->origin_col;
+  GtkStyleContext *context[SHIP_CARRIER_SZ];
+  for (int i = 0; i < SHIP_CARRIER_SZ; i++)
+    context[i] = gtk_widget_get_style_context(prepPhaseButtonGrid[(ship_origin_row*NUM_ROWS)+ship_origin_col+i]);
+  if (css == NULL)
+  {
+    css = gtk_css_provider_new();
+    gtk_css_provider_load_from_data(css, "* { background-image:none; background-color:green; }", -1, NULL);
+    for (int i = 0; i < SHIP_CARRIER_SZ; i++)
+      gtk_style_context_add_provider(context[i], GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_USER);
+
+    g_object_unref(css);
+  }
+  else
+  {
+    for (int i = 0; i < SHIP_CARRIER_SZ; i++)
+      gtk_style_context_remove_provider(context[i], GTK_STYLE_PROVIDER(css));
+    css = NULL;
+  }
+}
+
 static void preparation_phase(void)
 {
   GtkWidget *prep_phase_window = gtk_application_window_new(app);
@@ -46,14 +83,21 @@ static void preparation_phase(void)
   g_signal_connect(G_OBJECT(prep_phase_window), "destroy", G_CALLBACK(destroy), app);
 
   GtkWidget *prep_phase_gridbox = gtk_grid_new();
+  gtk_widget_set_halign(prep_phase_gridbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_valign(prep_phase_gridbox, GTK_ALIGN_CENTER);
+  gtk_grid_set_row_spacing(GTK_GRID(prep_phase_gridbox), 100);
+  gtk_grid_set_column_spacing(GTK_GRID(prep_phase_gridbox), 100);
+  gtk_container_add(GTK_CONTAINER(prep_phase_window), prep_phase_gridbox);
   
-  char *label_info = "Preparation Phase for "
+  char *label_info = "Preparation Phase for ";
   char buffer[strlen(label_info)+strlen(server->player_list[0]->playerName)+1];
-  snprintf(buffer, sizeof(buffer), "%s %s", label_info, server->player_list[0]->playerName);
+  snprintf(buffer, sizeof(buffer), "%s%s", label_info, server->player_list[0]->playerName);
   GtkWidget *prep_phase_label = gtk_label_new(buffer);
-  gtk_grid_attach(GTK_GRID(prep_phase_gridbox), prep_phase_label, 0, 0, 1, 0);
+  gtk_widget_set_halign(prep_phase_label, GTK_ALIGN_CENTER);
+  gtk_grid_attach(GTK_GRID(prep_phase_gridbox), prep_phase_label, 0, 0, 2, 1);
 
   GtkWidget *prep_phase_button_gridbox = gtk_grid_new();
+  gtk_grid_attach(GTK_GRID(prep_phase_gridbox), prep_phase_button_gridbox, 0, 1, 1, 1);
   gtk_grid_set_row_homogeneous(GTK_GRID(prep_phase_button_gridbox), TRUE);
   gtk_grid_set_column_homogeneous(GTK_GRID(prep_phase_button_gridbox), TRUE);
   prepPhaseButtonGrid = (GtkWidget **)malloc(sizeof(GtkWidget *) * NUM_ROWS * NUM_COLS);
@@ -61,10 +105,30 @@ static void preparation_phase(void)
   {
     for (int j = 0; j < NUM_COLS; j++)
     {
+      ship_loc_t *ship_loc = (ship_loc_t *)malloc(sizeof(ship_loc_t));
+      ship_loc->origin_row = i;
+      ship_loc->origin_col = j;
       prepPhaseButtonGrid[(i*NUM_ROWS)+j] = gtk_button_new();
-      gtk_grid_attach(GTK_GRID(prep_phase_button_gridbox), prepPhaseButtonGrid[(i*NUM_ROWS)+j], j, i, 0, 0);
+      gtk_grid_attach(GTK_GRID(prep_phase_button_gridbox), prepPhaseButtonGrid[(i*NUM_ROWS)+j], j, i, 1, 1);
+      g_signal_connect(G_OBJECT(prepPhaseButtonGrid[(i*NUM_ROWS)+j]), "clicked", G_CALLBACK(place_ship_on_grid), ship_loc);
     }
   }
+
+  GtkWidget *buttons_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 50);
+  gtk_widget_set_valign(buttons_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(buttons_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_vexpand(buttons_vbox, FALSE);
+  gtk_widget_set_hexpand(buttons_vbox, FALSE);
+  gtk_grid_attach(GTK_GRID(prep_phase_gridbox), buttons_vbox, 1, 1, 1, 1);
+
+  GtkWidget *prep_phase_rotate = gtk_button_new_with_label("Rotate");
+  GtkWidget *prep_phase_set = gtk_button_new_with_label("Set ship");
+  GtkWidget *prep_phase_finish = gtk_button_new_with_label("Finish");
+  gtk_box_pack_start(GTK_BOX(buttons_vbox), prep_phase_rotate, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(buttons_vbox), prep_phase_set, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(buttons_vbox), prep_phase_finish, FALSE, FALSE, 0);
+
+  gtk_widget_show_all(prep_phase_window);
 }
 
 static void initialize_players(GtkWidget *widget, gpointer data)
@@ -112,6 +176,7 @@ static void initialize_players(GtkWidget *widget, gpointer data)
   free(playerNameDialog);
   gtk_widget_hide(create_server_window);
   gtk_widget_destroy(GTK_WIDGET(data));
+  preparation_phase();
 }
 
 static void get_player_names(void)
@@ -218,12 +283,6 @@ static void back_to_main_action(GtkWidget* widget, gpointer data)
 {
   gtk_widget_hide(GTK_WIDGET(gtk_application_get_active_window(app)));
   gtk_widget_show(GTK_WIDGET(data));
-}
-
-void destroy (GtkWidget* widget, gpointer data)
-{
-  printf("Exiting...\n");
-  g_application_quit(G_APPLICATION(app));
 }
 
 static void create_server_menu(GtkWidget* widget, gpointer data)
