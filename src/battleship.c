@@ -217,8 +217,8 @@ uint8_t check_availability(player_t *player, ship_loc_t loc_vector, uint8_t ship
         (ship_row + ship_sz > NUM_ROWS ||
         find_vertical_sum(player->playerPlacement, NUM_ROWS, ship_row, ship_col, ship_sz))))
     {
-        printf("arg1: %d, arg2: %d, arg3: %d\n", ship_ori == 1, ship_row + ship_sz > NUM_ROWS,
-                                                find_vertical_sum(player->playerPlacement, NUM_ROWS, ship_row, ship_col, ship_sz));
+        // printf("arg1: %d, arg2: %d, arg3: %d\n", ship_ori == 1, ship_row + ship_sz > NUM_ROWS,
+                                                // find_vertical_sum(player->playerPlacement, NUM_ROWS, ship_row, ship_col, ship_sz));
         printf("Cannot place ship here: invalid placement\n");
         return 0;
     }
