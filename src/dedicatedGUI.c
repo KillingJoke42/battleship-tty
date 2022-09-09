@@ -18,6 +18,10 @@ gulong *handler_ids;
 gulong set_ship_handler_id;
 
 GtkWidget *activeButton;
+
+GtkWidget *prep_phase_curr_ship_label;
+GtkWidget *prep_phase_label;
+
 GtkCssProvider *css = NULL;
 GtkStyleContext **context = NULL;
 
@@ -25,8 +29,11 @@ ship_loc_t *ship_loc;
 static int orientation = 0;
 static int player_idx = 0;
 static int placed_ships = 0;
+uint8_t placing_ship = 0;
 
 static void preparation_phase(void);
+static void place_ship_on_grid(GtkWidget *widget, gpointer data);
+static void refresh_button_grid(uint8_t all);
 
 void destroy (GtkWidget* widget, gpointer data)
 {
@@ -60,11 +67,45 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
 
 static void next_player_placement(GtkWidget *widget, gpointer data)
 {
+  print_player_placements(server->player_list[player_idx]->playerPlacement, NUM_ROWS, NUM_COLS);
+  player_idx++;
 
+  if (player_idx == server->playercnt)
+  {
+    printf("FINISHED!!!\n");
+    return;
+  }
+
+  orientation = 0;
+  placed_ships = 0;
+  placing_ship = 0;
+  ship_loc->origin_row = 0;
+  ship_loc->origin_col = 0;
+  
+  char *label_info = "Preparation Phase for ";
+  char buffer[strlen(label_info)+strlen(server->player_list[player_idx]->playerName)+1];
+  snprintf(buffer, sizeof(buffer), "%s%s", label_info, server->player_list[player_idx]->playerName);
+  gtk_label_set_text(GTK_LABEL(prep_phase_label), buffer);
+
+  gtk_label_set_text(GTK_LABEL(prep_phase_curr_ship_label), "Placing carrier");
+
+  refresh_button_grid(1);
+  for (int i = 0; i < NUM_ROWS; i++)
+  {
+    for (int j = 0; j < NUM_COLS; j++)
+    {
+      gtk_widget_set_sensitive(prepPhaseButtonGrid[(i*NUM_ROWS)+j], TRUE);
+    }
+  }
 }
 
 static void change_orientation(GtkWidget *widget, gpointer data)
 {
+  if (placing_ship)
+  {
+    gtk_entry_blank_error_dialog(NULL, "Unable to change orientation; You are placing a ship!");
+    return;
+  }
   orientation = (orientation) ? 0 : 1;
 }
 
@@ -73,15 +114,28 @@ static void fix_ship(GtkWidget *widget, gpointer data)
   uint8_t origin_row = ship_loc->origin_row;
   uint8_t origin_col = ship_loc->origin_col;
 
-  for (int j = 0; j < ship_sz_map[placed_ships]; j++)
-  {
-    int posy = (orientation) ? (((origin_row+j)*NUM_ROWS)+origin_col) : ((origin_row*NUM_ROWS)+origin_col+j);
-    gtk_widget_set_sensitive(prepPhaseButtonGrid[posy], FALSE);
+  player_t *player = server->player_list[player_idx];
 
-    context = NULL;
-    css = NULL;
+  player->player_ship_status.ship_locs[placed_ships].origin_row = origin_row;
+  player->player_ship_status.ship_locs[placed_ships].origin_col = origin_col;
+  player->player_ship_status.ship_locs[placed_ships].orientation = orientation;
+  
+  if (orientation == 0)
+  {
+      for (int j = 0; j < ship_sz_map[placed_ships]; j++)
+      {
+          arr_2d_set_char_val(player->playerPlacement, NUM_ROWS, origin_row, origin_col+j, placed_ships+1);
+      }
+  }
+  else
+  {
+      for (int j = 0; j < ship_sz_map[placed_ships]; j++)
+      {
+          arr_2d_set_char_val(player->playerPlacement, NUM_ROWS, origin_row+j, origin_col, placed_ships+1);
+      }
   }
 
+  placing_ship = 0;
   placed_ships++;
 
   if (placed_ships == NUM_SHIPS)
@@ -90,22 +144,51 @@ static void fix_ship(GtkWidget *widget, gpointer data)
     {
       for (int j = 0; j < NUM_COLS; j++)
       {
-        g_signal_handler_disconnect(G_OBJECT(prepPhaseButtonGrid[(i*NUM_ROWS)+j]), handler_ids[(i*NUM_ROWS)+j]);
+        gtk_widget_set_sensitive(prepPhaseButtonGrid[(i*NUM_ROWS)+j], FALSE);
       }
     }
-
-    g_signal_handler_disconnect(G_OBJECT(widget), set_ship_handler_id);
-    gtk_label_set_text(GTK_LABEL(data), "All ships placed");
+    gtk_label_set_text(GTK_LABEL(data), "All ships placed!");
     return;
   }
+
   char buffer[25];
   char *lbl_str = "Placing ";
   snprintf(buffer, 20, "%s%s", lbl_str, ship_name_map[placed_ships]);
   gtk_label_set_text(GTK_LABEL(data), buffer);
 }
 
+static void refresh_button_grid(uint8_t all)
+{
+  if (all)
+  {
+    for (int i = 0; i < NUM_ROWS; i++)
+    {
+      for (int j = 0; j < NUM_COLS; j++)
+      {
+        gtk_button_set_label(GTK_BUTTON(prepPhaseButtonGrid[(i*NUM_ROWS)+j]), "");
+      }
+    }
+  }
+  else
+  {
+    for (int i = 0; i < ship_sz_map[placed_ships]; i++)
+    {
+      uint8_t button_ctx = (orientation) ? 
+                            (((ship_loc->origin_row+i)*NUM_ROWS)+ship_loc->origin_col) :
+                            ((ship_loc->origin_row*NUM_ROWS)+ship_loc->origin_col+i);
+      gtk_button_set_label(GTK_BUTTON(prepPhaseButtonGrid[button_ctx]), "");
+    }
+  }
+}
+
 static void place_ship_on_grid(GtkWidget* widget, gpointer data)
 {
+  if (placing_ship)
+  {
+    refresh_button_grid(0);
+    placing_ship = 0;
+    return;
+  }
   ship_loc_t *ship_origin = (ship_loc_t *)data;
   int ship_origin_row = ship_origin->origin_row;
   int ship_origin_col = ship_origin->origin_col;
@@ -119,34 +202,20 @@ static void place_ship_on_grid(GtkWidget* widget, gpointer data)
     return;
   }
 
-  if (!context)
-  {
-    ship_loc->origin_row = ship_origin_row;
-    ship_loc->origin_col = ship_origin_col;
-    context = (GtkStyleContext **)malloc(sizeof(GtkStyleContext *) * ship_sz_map[placed_ships]);
-    for (int i = 0; i < ship_sz_map[placed_ships]; i++)
-    {
-      int posy = (orientation) ? (((ship_origin_row+i)*NUM_ROWS)+ship_origin_col) : ((ship_origin_row*NUM_COLS)+ship_origin_col+i);
-      context[i] = gtk_widget_get_style_context(prepPhaseButtonGrid[posy]);
-    }
-  }
+  char inform[2];
+  inform[0] = ship_name_map[placed_ships][0];
+  inform[1] = '\0';
 
-  if (css == NULL)
+  for (int i = 0; i < ship_sz_map[placed_ships]; i++)
   {
-    css = gtk_css_provider_new();
-    gtk_css_provider_load_from_data(css, ship_css_map[placed_ships], -1, NULL);
-    for (int i = 0; i < ship_sz_map[placed_ships]; i++)
-      gtk_style_context_add_provider(context[i], GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_USER);
-
-    g_object_unref(css);
+    uint8_t button_ctx = (orientation) ? 
+                        (((ship_origin_row+i)*NUM_ROWS)+ship_origin_col) :
+                        ((ship_origin_row*NUM_ROWS)+ship_origin_col+i);
+    gtk_button_set_label(GTK_BUTTON(prepPhaseButtonGrid[button_ctx]), inform);
   }
-  else
-  {
-    for (int i = 0; i < ship_sz_map[placed_ships]; i++)
-      gtk_style_context_remove_provider(context[i], GTK_STYLE_PROVIDER(css));
-    css = NULL;
-    context = NULL;
-  }
+  ship_loc->origin_row = ship_origin_row;
+  ship_loc->origin_col = ship_origin_col;
+  placing_ship = 1;
 }
 
 static void preparation_phase(void)
@@ -170,7 +239,7 @@ static void preparation_phase(void)
   char *label_info = "Preparation Phase for ";
   char buffer[strlen(label_info)+strlen(server->player_list[player_idx]->playerName)+1];
   snprintf(buffer, sizeof(buffer), "%s%s", label_info, server->player_list[player_idx]->playerName);
-  GtkWidget *prep_phase_label = gtk_label_new(buffer);
+  prep_phase_label = gtk_label_new(buffer);
   gtk_widget_set_halign(prep_phase_label, GTK_ALIGN_CENTER);
   gtk_grid_attach(GTK_GRID(prep_phase_gridbox), prep_phase_label, 0, 0, 2, 1);
 
@@ -199,7 +268,7 @@ static void preparation_phase(void)
   gtk_widget_set_hexpand(buttons_vbox, FALSE);
   gtk_grid_attach(GTK_GRID(prep_phase_gridbox), buttons_vbox, 1, 1, 1, 1);
 
-  GtkWidget *prep_phase_curr_ship_label = gtk_label_new("Placing carrier");
+  prep_phase_curr_ship_label = gtk_label_new("Placing carrier");
   GtkWidget *prep_phase_rotate = gtk_button_new_with_label("Rotate");
   GtkWidget *prep_phase_set = gtk_button_new_with_label("Set ship");
   GtkWidget *prep_phase_finish = gtk_button_new_with_label("Finish");
@@ -210,7 +279,7 @@ static void preparation_phase(void)
 
   g_signal_connect(G_OBJECT(prep_phase_rotate), "clicked", G_CALLBACK(change_orientation), NULL);
   set_ship_handler_id = g_signal_connect(G_OBJECT(prep_phase_set), "clicked", G_CALLBACK(fix_ship), prep_phase_curr_ship_label);
-  g_signal_connect(G_OBJECT(prep_phase_finish), "clicked", G_CALLBACK(next_player_placement), NULL);
+  g_signal_connect(G_OBJECT(prep_phase_finish), "clicked", G_CALLBACK(next_player_placement), prep_phase_button_gridbox);
 
   gtk_widget_show_all(prep_phase_window);
 }

@@ -16,6 +16,8 @@ typedef struct {
     GtkWidget *server_password_widget;
 } create_server_ctx_t;
 
+static char *default_css = "* { background-image:none; background-color:WhiteSmoke; }";
+
 static char *ship_css_map[55] = {
     "* { background-image:none; background-color:lime; }",
     "* { background-image:none; background-color:red; }",
