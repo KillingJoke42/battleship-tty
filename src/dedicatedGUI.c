@@ -21,6 +21,7 @@ GtkWidget *activeButton;
 
 GtkWidget *prep_phase_curr_ship_label;
 GtkWidget *prep_phase_label;
+GtkWidget *turn_prompt;
 
 GtkCssProvider *css = NULL;
 GtkStyleContext **context = NULL;
@@ -39,6 +40,11 @@ void destroy (GtkWidget* widget, gpointer data)
 {
   printf("Exiting...\n");
   g_application_quit(G_APPLICATION(app));
+}
+
+void close_window(GtkWidget *widget, gpointer data)
+{
+  gtk_window_close(GTK_WINDOW(data));
 }
 
 static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
@@ -65,14 +71,181 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
   gtk_widget_show_all (dialog);
 }
 
+static void view_your_notes(GtkWidget *widget, gpointer data)
+{
+  gint index = gtk_list_box_row_get_index(gtk_list_box_get_selected_row(GTK_LIST_BOX(data)));
+
+  GtkWidget *view_notes_window = gtk_application_window_new(app);
+  gtk_window_set_title(GTK_WINDOW(view_notes_window), "Notes");
+  gtk_window_set_default_size(GTK_WINDOW(view_notes_window), 320, 240);
+  gtk_window_set_position(GTK_WINDOW(view_notes_window), GTK_WIN_POS_CENTER_ALWAYS);
+
+  GtkWidget *view_notes_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+  gtk_widget_set_valign(view_notes_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(view_notes_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_vexpand(view_notes_vbox, FALSE);
+  gtk_widget_set_hexpand(view_notes_vbox, FALSE);
+  gtk_container_add(GTK_CONTAINER(view_notes_window), view_notes_vbox);
+
+  char *lbl_txt = "Viewing your notes on ";
+  uint8_t bufflen = strlen(lbl_txt)+strlen(server->player_list[index]->playerName)+1;
+  char buffer[bufflen];
+  snprintf(buffer, bufflen, "%s%s", lbl_txt, server->player_list[index]->playerName);
+  GtkWidget *view_notes_label = gtk_label_new(buffer);
+  gtk_box_pack_start(GTK_BOX(view_notes_vbox), view_notes_label, FALSE, FALSE, 0);
+
+  GtkWidget *view_notes_grid = gtk_grid_new();
+  gtk_grid_set_row_homogeneous(GTK_GRID(view_notes_grid), TRUE);
+  gtk_grid_set_column_homogeneous(GTK_GRID(view_notes_grid), TRUE);
+  gtk_grid_set_row_spacing(GTK_GRID(view_notes_grid), 10);
+  gtk_grid_set_column_spacing(GTK_GRID(view_notes_grid), 10);
+  gtk_box_pack_start(GTK_BOX(view_notes_vbox), view_notes_grid, FALSE, FALSE, 0);
+
+  for (int i = 0; i < NUM_ROWS; i++)
+  {
+    for (int j = 0; j < NUM_COLS; j++)
+    {
+      char mark[2];
+      mark[0] = server->player_list[player_idx]->oppn_info[index][(i*NUM_ROWS)+j];
+      mark[1] = '\0';
+      char *tag_open;
+      if (mark[0] == 'X')
+        tag_open = "<h2><b><span background='#ff0000' foreground='#ffffff' font='36'>";
+      else
+        tag_open = "<b><span background='#00ff00' foreground='#ffffff' font='36'>";
+      char *tag_close = "</span></b>";
+      uint8_t mrkp_txt_sz = strlen(tag_open)+1+strlen(tag_close)+1;
+      char mrkp_txt[mrkp_txt_sz];
+      snprintf(mrkp_txt, mrkp_txt_sz, "%s%s%s", tag_open, mark, tag_close);
+      GtkWidget *entry_elem = gtk_label_new(mrkp_txt);
+      gtk_label_set_use_markup(GTK_LABEL(entry_elem), TRUE);
+      gtk_grid_attach(GTK_GRID(view_notes_grid), entry_elem, j, i, 1, 1);
+    }
+  }
+
+  GtkWidget *view_notes_close_button = gtk_button_new_with_label("Close");
+  gtk_box_pack_start(GTK_BOX(view_notes_vbox), view_notes_close_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(view_notes_close_button), "clicked", G_CALLBACK(close_window), view_notes_window);
+
+  gtk_widget_show_all(view_notes_window);
+}
+
+static void select_an_oppn(void)
+{
+  GtkWidget *select_oppn_window = gtk_application_window_new(app);
+  gtk_window_set_title(GTK_WINDOW(select_oppn_window), "Select a player");
+  gtk_window_set_default_size(GTK_WINDOW(select_oppn_window), 320, 240);
+  gtk_window_set_position(GTK_WINDOW(select_oppn_window), GTK_WIN_POS_CENTER_ALWAYS);
+
+  GtkWidget *select_oppn_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+  gtk_widget_set_valign(select_oppn_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(select_oppn_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_vexpand(select_oppn_vbox, FALSE);
+  gtk_widget_set_hexpand(select_oppn_vbox, FALSE);
+  gtk_container_add(GTK_CONTAINER(select_oppn_window), select_oppn_vbox);
+
+  GtkWidget *select_oppn_label = gtk_label_new("Select a player to perform operation on");
+  gtk_box_pack_start(GTK_BOX(select_oppn_vbox), select_oppn_label, FALSE, FALSE, 0);
+  
+  GtkWidget *select_oppn_list = gtk_list_box_new();
+  gtk_list_box_set_selection_mode(GTK_LIST_BOX(select_oppn_list), GTK_SELECTION_BROWSE);
+  gtk_box_pack_start(GTK_BOX(select_oppn_vbox), select_oppn_list, FALSE, FALSE, 0);
+
+  GtkWidget *players_lbl[server->playercnt];
+  for (int i = 0; i < server->playercnt; i++)
+  {
+    players_lbl[i] = gtk_label_new(server->player_list[i]->playerName);
+    gtk_list_box_insert(GTK_LIST_BOX(select_oppn_list), players_lbl[i], -1);
+    if (i == player_idx)
+      gtk_list_box_row_set_selectable(gtk_list_box_get_row_at_index(GTK_LIST_BOX(select_oppn_list), i), FALSE);
+  }
+
+  GtkWidget *select_oppn_button = gtk_button_new_with_label("Select");
+  gtk_box_pack_start(GTK_BOX(select_oppn_vbox), select_oppn_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(select_oppn_button), "clicked", G_CALLBACK(view_your_notes), select_oppn_list);
+
+  GtkWidget *select_oppn_back_button = gtk_button_new_with_label("Back");
+  gtk_box_pack_start(GTK_BOX(select_oppn_vbox), select_oppn_back_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(select_oppn_back_button), "clicked", G_CALLBACK(close_window), select_oppn_window);
+
+  gtk_widget_show_all(select_oppn_window);
+}
+
+static void end_round(GtkWidget *widget, gpointer data)
+{
+  if (player_idx == server->playercnt - 1)
+  {
+    player_idx = 0;
+    goto skip_increment;
+  }
+
+  player_idx++;
+
+skip_increment:
+  if (GPOINTER_TO_UINT(data))
+  {
+    char *lbl_txt = "'s trun";
+    char *turn_name = server->player_list[player_idx]->playerName;
+    uint8_t bufsz = strlen(lbl_txt)+strlen(turn_name)+1;
+    char buffer[bufsz];
+    snprintf(buffer, bufsz, "%s%s", turn_name, lbl_txt);
+    gtk_label_set_text(GTK_LABEL(turn_prompt), buffer);
+  }
+}
+
+static void combat_menu(void)
+{
+  GtkWidget *combat_menu_window = gtk_application_window_new(app);
+  gtk_window_set_title(GTK_WINDOW(combat_menu_window), "Begin Game");
+  gtk_window_set_default_size(GTK_WINDOW(combat_menu_window), 320, 240);
+  gtk_window_set_position(GTK_WINDOW(combat_menu_window), GTK_WIN_POS_CENTER_ALWAYS);
+
+  GtkWidget *combat_menu_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+  gtk_widget_set_valign(combat_menu_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(combat_menu_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_vexpand(combat_menu_vbox, FALSE);
+  gtk_widget_set_hexpand(combat_menu_vbox, FALSE);
+  gtk_container_add(GTK_CONTAINER(combat_menu_window), combat_menu_vbox);
+
+  char *lbl_txt = "'s trun";
+  char *turn_name = server->player_list[player_idx]->playerName;
+  uint8_t bufsz = strlen(lbl_txt)+strlen(turn_name)+1;
+  char buffer[bufsz];
+  snprintf(buffer, bufsz, "%s%s", turn_name, lbl_txt);
+
+  turn_prompt = gtk_label_new(buffer);
+  gtk_box_pack_start(GTK_BOX(combat_menu_vbox), turn_prompt, FALSE, FALSE, 0);
+
+  GtkWidget *fire_phase_button = gtk_button_new_with_label("Fire on selected player");
+  gtk_box_pack_start(GTK_BOX(combat_menu_vbox), fire_phase_button, FALSE, FALSE, 0);
+
+  GtkWidget *view_notes_button = gtk_button_new_with_label("View notes of selected player");
+  gtk_box_pack_start(GTK_BOX(combat_menu_vbox), view_notes_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(view_notes_button), "clicked", G_CALLBACK(select_an_oppn), NULL);
+
+  uint8_t upd = 1;
+  GtkWidget *end_round_button = gtk_button_new_with_label("End round");
+  gtk_box_pack_start(GTK_BOX(combat_menu_vbox), end_round_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(end_round_button), "clicked", G_CALLBACK(end_round), GINT_TO_POINTER(upd));
+
+  gtk_widget_show_all(combat_menu_window);
+}
+
 static void next_player_placement(GtkWidget *widget, gpointer data)
 {
-  print_player_placements(server->player_list[player_idx]->playerPlacement, NUM_ROWS, NUM_COLS);
+  if (placed_ships != NUM_SHIPS)
+  {
+    gtk_entry_blank_error_dialog(NULL, "You haven't placed all the ships!");
+    return;
+  }
+
   player_idx++;
 
   if (player_idx == server->playercnt)
   {
-    printf("FINISHED!!!\n");
+    player_idx = 0;
+    gtk_widget_hide(GTK_WIDGET(data));
+    combat_menu();
     return;
   }
 
@@ -111,6 +284,9 @@ static void change_orientation(GtkWidget *widget, gpointer data)
 
 static void fix_ship(GtkWidget *widget, gpointer data)
 {
+  if (!placing_ship)
+    return;
+
   uint8_t origin_row = ship_loc->origin_row;
   uint8_t origin_col = ship_loc->origin_col;
 
@@ -279,7 +455,7 @@ static void preparation_phase(void)
 
   g_signal_connect(G_OBJECT(prep_phase_rotate), "clicked", G_CALLBACK(change_orientation), NULL);
   set_ship_handler_id = g_signal_connect(G_OBJECT(prep_phase_set), "clicked", G_CALLBACK(fix_ship), prep_phase_curr_ship_label);
-  g_signal_connect(G_OBJECT(prep_phase_finish), "clicked", G_CALLBACK(next_player_placement), prep_phase_button_gridbox);
+  g_signal_connect(G_OBJECT(prep_phase_finish), "clicked", G_CALLBACK(next_player_placement), prep_phase_window);
 
   gtk_widget_show_all(prep_phase_window);
 }

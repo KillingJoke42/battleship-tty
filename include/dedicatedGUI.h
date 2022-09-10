@@ -27,6 +27,7 @@ static char *ship_css_map[55] = {
 };
 
 // void activate (GtkApplication* app, gpointer user_data);
+char* evaluate_lbl_txt(void);
 void create_label_box_pair(GtkWidget *box, GtkWidget *label, GtkWidget *entry, const char *label_text);
 int gtk_app_init(int argc, char **argv);
 #endif
