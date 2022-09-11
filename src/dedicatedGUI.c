@@ -14,17 +14,12 @@ static server_t *server;
 char *name;
 GtkWidget **playerNameDialog;
 GtkWidget **prepPhaseButtonGrid;
-gulong *handler_ids;
-gulong set_ship_handler_id;
 
 GtkWidget *activeButton;
 
 GtkWidget *prep_phase_curr_ship_label;
 GtkWidget *prep_phase_label;
 GtkWidget *turn_prompt;
-
-GtkCssProvider *css = NULL;
-GtkStyleContext **context = NULL;
 
 ship_loc_t *ship_loc;
 static int orientation = 0;
@@ -71,6 +66,57 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
   gtk_widget_show_all (dialog);
 }
 
+static void test(GtkWidget *widget, gpointer data)
+{
+  char *lbl_mrkp_txt;
+  if (placing_ship == 0)
+  {
+    lbl_mrkp_txt = "<span background='#ff0000'>  </span>";
+    placing_ship = 1;
+  }
+  else
+  {
+    lbl_mrkp_txt = "<span>  </span>";
+    placing_ship = 0;
+  }
+  gtk_label_set_markup(GTK_LABEL(gtk_bin_get_child(GTK_BIN(widget))), lbl_mrkp_txt);
+}
+
+static void fire_phase(GtkWidget *widget, gpointer data)
+{
+  GtkWidget *fire_phase_window = gtk_application_window_new(app);
+  gtk_window_set_title(GTK_WINDOW(fire_phase_window), "Fire phase!");
+  gtk_window_set_default_size(GTK_WINDOW(fire_phase_window), 320, 240);
+  gtk_window_set_position(GTK_WINDOW(fire_phase_window), GTK_WIN_POS_CENTER_ALWAYS);
+
+  GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+  // gtk_container_add(GTK_CONTAINER(fire_phase_window), vbox);
+  gtk_widget_set_valign(vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_vexpand(vbox, FALSE);
+  gtk_widget_set_hexpand(vbox, FALSE);
+
+  GtkWidget *grid = gtk_grid_new();
+  gtk_container_add(GTK_CONTAINER(fire_phase_window), grid);
+  gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
+  gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
+
+  for (int i = 0; i < NUM_ROWS; i++)
+  {
+    for (int j = 0; j < NUM_COLS; j++)
+    {
+      GtkWidget *button = gtk_button_new_with_label("  ");
+      gtk_grid_attach(GTK_GRID(grid), button, j, i, 1, 1);
+      g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(test), NULL);
+    }
+  }
+
+  // char *lbl_mrkp_txt = "<span background='#ff0000' foreground='#ff0000'>......</span>";
+  // gtk_label_set_markup(GTK_LABEL(gtk_bin_get_child(GTK_BIN(button))), lbl_mrkp_txt);
+
+  gtk_widget_show_all(fire_phase_window);
+}
+
 static void view_your_notes(GtkWidget *widget, gpointer data)
 {
   gint index = gtk_list_box_row_get_index(gtk_list_box_get_selected_row(GTK_LIST_BOX(data)));
@@ -110,9 +156,9 @@ static void view_your_notes(GtkWidget *widget, gpointer data)
       mark[1] = '\0';
       char *tag_open;
       if (mark[0] == 'X')
-        tag_open = "<h2><b><span background='#ff0000' foreground='#ffffff' font='36'>";
+        tag_open = "<b><span background='#ff0000' foreground='#ffffff' font='16'>";
       else
-        tag_open = "<b><span background='#00ff00' foreground='#ffffff' font='36'>";
+        tag_open = "<b><span background='#00ff00' foreground='#ffffff' font='16'>";
       char *tag_close = "</span></b>";
       uint8_t mrkp_txt_sz = strlen(tag_open)+1+strlen(tag_close)+1;
       char mrkp_txt[mrkp_txt_sz];
@@ -130,7 +176,7 @@ static void view_your_notes(GtkWidget *widget, gpointer data)
   gtk_widget_show_all(view_notes_window);
 }
 
-static void select_an_oppn(void)
+static void select_an_oppn(GtkWidget *widget, gpointer data)
 {
   GtkWidget *select_oppn_window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(select_oppn_window), "Select a player");
@@ -162,7 +208,9 @@ static void select_an_oppn(void)
 
   GtkWidget *select_oppn_button = gtk_button_new_with_label("Select");
   gtk_box_pack_start(GTK_BOX(select_oppn_vbox), select_oppn_button, FALSE, FALSE, 0);
-  g_signal_connect(G_OBJECT(select_oppn_button), "clicked", G_CALLBACK(view_your_notes), select_oppn_list);
+
+  g_signal_connect(G_OBJECT(select_oppn_button), "clicked", 
+  (GPOINTER_TO_UINT(data)) ? G_CALLBACK(view_your_notes) : G_CALLBACK(fire_phase), select_oppn_list);
 
   GtkWidget *select_oppn_back_button = gtk_button_new_with_label("Back");
   gtk_box_pack_start(GTK_BOX(select_oppn_vbox), select_oppn_back_button, FALSE, FALSE, 0);
@@ -216,12 +264,17 @@ static void combat_menu(void)
   turn_prompt = gtk_label_new(buffer);
   gtk_box_pack_start(GTK_BOX(combat_menu_vbox), turn_prompt, FALSE, FALSE, 0);
 
+  uint8_t choose_view_notes = 0;
+
   GtkWidget *fire_phase_button = gtk_button_new_with_label("Fire on selected player");
   gtk_box_pack_start(GTK_BOX(combat_menu_vbox), fire_phase_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(fire_phase_button), "clicked", G_CALLBACK(select_an_oppn), GINT_TO_POINTER(choose_view_notes));
+
+  choose_view_notes = 1;
 
   GtkWidget *view_notes_button = gtk_button_new_with_label("View notes of selected player");
   gtk_box_pack_start(GTK_BOX(combat_menu_vbox), view_notes_button, FALSE, FALSE, 0);
-  g_signal_connect(G_OBJECT(view_notes_button), "clicked", G_CALLBACK(select_an_oppn), NULL);
+  g_signal_connect(G_OBJECT(view_notes_button), "clicked", G_CALLBACK(select_an_oppn), GINT_TO_POINTER(choose_view_notes));
 
   uint8_t upd = 1;
   GtkWidget *end_round_button = gtk_button_new_with_label("End round");
@@ -341,7 +394,9 @@ static void refresh_button_grid(uint8_t all)
     {
       for (int j = 0; j < NUM_COLS; j++)
       {
-        gtk_button_set_label(GTK_BUTTON(prepPhaseButtonGrid[(i*NUM_ROWS)+j]), "");
+        gtk_label_set_markup(
+          GTK_LABEL(gtk_bin_get_child(GTK_BIN(prepPhaseButtonGrid[(i*NUM_ROWS)+j]))), 
+          default_css);
       }
     }
   }
@@ -352,7 +407,9 @@ static void refresh_button_grid(uint8_t all)
       uint8_t button_ctx = (orientation) ? 
                             (((ship_loc->origin_row+i)*NUM_ROWS)+ship_loc->origin_col) :
                             ((ship_loc->origin_row*NUM_ROWS)+ship_loc->origin_col+i);
-      gtk_button_set_label(GTK_BUTTON(prepPhaseButtonGrid[button_ctx]), "");
+      gtk_label_set_markup(
+          GTK_LABEL(gtk_bin_get_child(GTK_BIN(prepPhaseButtonGrid[button_ctx]))), 
+          default_css);
     }
   }
 }
@@ -378,16 +435,18 @@ static void place_ship_on_grid(GtkWidget* widget, gpointer data)
     return;
   }
 
-  char inform[2];
-  inform[0] = ship_name_map[placed_ships][0];
-  inform[1] = '\0';
+  // char inform[2];
+  // inform[0] = ship_name_map[placed_ships][0];
+  // inform[1] = '\0';
 
   for (int i = 0; i < ship_sz_map[placed_ships]; i++)
   {
     uint8_t button_ctx = (orientation) ? 
                         (((ship_origin_row+i)*NUM_ROWS)+ship_origin_col) :
                         ((ship_origin_row*NUM_ROWS)+ship_origin_col+i);
-    gtk_button_set_label(GTK_BUTTON(prepPhaseButtonGrid[button_ctx]), inform);
+    gtk_label_set_markup(
+          GTK_LABEL(gtk_bin_get_child(GTK_BIN(prepPhaseButtonGrid[button_ctx]))), 
+          ship_css_map[placed_ships]);
   }
   ship_loc->origin_row = ship_origin_row;
   ship_loc->origin_col = ship_origin_col;
@@ -397,7 +456,6 @@ static void place_ship_on_grid(GtkWidget* widget, gpointer data)
 static void preparation_phase(void)
 {
   ship_loc = (ship_loc_t *)malloc(sizeof(ship_loc_t));
-  handler_ids = (gulong *)malloc(sizeof(gulong) * NUM_ROWS * NUM_COLS);
 
   GtkWidget *prep_phase_window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(prep_phase_window), "Preparation Phase");
@@ -431,9 +489,9 @@ static void preparation_phase(void)
       ship_loc_t *button_pos = (ship_loc_t *)malloc(sizeof(ship_loc_t));
       button_pos->origin_row = i;
       button_pos->origin_col = j;
-      prepPhaseButtonGrid[(i*NUM_ROWS)+j] = gtk_button_new();
+      prepPhaseButtonGrid[(i*NUM_ROWS)+j] = gtk_button_new_with_label("  ");
       gtk_grid_attach(GTK_GRID(prep_phase_button_gridbox), prepPhaseButtonGrid[(i*NUM_ROWS)+j], j, i, 1, 1);
-      handler_ids[(i*NUM_ROWS)+j] = g_signal_connect(G_OBJECT(prepPhaseButtonGrid[(i*NUM_ROWS)+j]), "clicked", G_CALLBACK(place_ship_on_grid), button_pos);
+      g_signal_connect(G_OBJECT(prepPhaseButtonGrid[(i*NUM_ROWS)+j]), "clicked", G_CALLBACK(place_ship_on_grid), button_pos);
     }
   }
 
@@ -454,7 +512,7 @@ static void preparation_phase(void)
   gtk_box_pack_start(GTK_BOX(buttons_vbox), prep_phase_finish, FALSE, FALSE, 0);
 
   g_signal_connect(G_OBJECT(prep_phase_rotate), "clicked", G_CALLBACK(change_orientation), NULL);
-  set_ship_handler_id = g_signal_connect(G_OBJECT(prep_phase_set), "clicked", G_CALLBACK(fix_ship), prep_phase_curr_ship_label);
+  g_signal_connect(G_OBJECT(prep_phase_set), "clicked", G_CALLBACK(fix_ship), prep_phase_curr_ship_label);
   g_signal_connect(G_OBJECT(prep_phase_finish), "clicked", G_CALLBACK(next_player_placement), prep_phase_window);
 
   gtk_widget_show_all(prep_phase_window);
