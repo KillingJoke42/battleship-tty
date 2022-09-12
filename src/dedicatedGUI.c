@@ -55,15 +55,27 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char *message,
                                         ("OK"),
                                         GTK_RESPONSE_NONE,
                                         NULL);
+  gtk_widget_set_size_request(dialog, 256, 144);
   content_area = gtk_dialog_get_content_area (GTK_DIALOG (dialog));
+
+  GtkWidget *box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 20);
   label = gtk_label_new (message);
+  GtkWidget *image = gtk_image_new();
+
+  if (title == NULL)
+    gtk_image_set_from_icon_name(GTK_IMAGE(image), "dialog-error", GTK_ICON_SIZE_DIALOG);
+  else
+    gtk_image_set_from_icon_name(GTK_IMAGE(image), "dialog-information", GTK_ICON_SIZE_DIALOG);
+  
+  gtk_box_pack_start(GTK_BOX(box), image, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(box), label, FALSE, FALSE, 0);
 
   g_signal_connect_swapped (dialog,
                             "response",
                             G_CALLBACK (gtk_widget_destroy),
                             dialog);
 
-  gtk_container_add (GTK_CONTAINER (content_area), label);
+  gtk_container_add (GTK_CONTAINER (content_area), box);
   gtk_widget_show_all (dialog);
 }
 
@@ -659,11 +671,6 @@ static void initialize_players(GtkWidget *widget, gpointer data)
     server->player_list[rng_val] = (player_t *)malloc(sizeof(player_t));
     name = g_strdup(gtk_entry_get_text(GTK_ENTRY(playerNameDialog[i])));
     player_init(server->player_list[rng_val], name, server->playercnt, rng_val);
-  }
-
-  for (int i = 0; i < server->playercnt; i++)
-  {
-    printf("player %s\n", server->player_list[i]->playerName);
   }
 
   free(rng_arr);
