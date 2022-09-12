@@ -48,6 +48,7 @@ static char ship_sz_map[] = {SHIP_CARRIER_SZ, SHIP_BATTLESHIP_SZ, SHIP_DESTROYER
 #endif
 
 void phase_place_ships(player_t *player);
+uint8_t fire_after_calc(player_t *being_attacked, player_t *attacker, uint8_t ship_row, uint8_t ship_col);
 void phase_fire(player_t *attacker, player_t *being_attacked);
 uint8_t find_arr_sum(char* arr, int range);
 uint8_t find_vertical_sum(char *arr, char num_rows, char ship_row, char ship_col, int range);

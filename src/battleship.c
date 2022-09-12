@@ -85,27 +85,15 @@ void print_player_placements(char *player_arr, char num_rows, char num_cols)
     }
 }
 
-void phase_fire(player_t *attacker, player_t *being_attacked)
+uint8_t fire_after_calc(player_t *being_attacked, player_t *attacker, uint8_t ship_row, uint8_t ship_col)
 {
-    char c, ship_row = 10, ship_col = 10;
-    printf("Firing at %s.\n", being_attacked->playerName);
-
-    ship_row = get_character("Row (A-J): ",
-                            "You must fire between row A to J\n",
-                            'A',
-                            'J') - 'A';
-
-    ship_col = get_character("Col (0-9): ",
-                            "You must fire between column 0 to 9\n",
-                            '0',
-                            '9') - '0';
-
     if (arr_2d_get_char_val(being_attacked->playerPlacement, NUM_ROWS, ship_row, ship_col) <= 0)
     {
         printf("MISS\n");
         attacker->streak = 0;
         if (arr_2d_get_val(attacker->oppn_info[being_attacked->idx], NUM_ROWS, ship_row, ship_col) != 'X')
             arr_2d_set_val(attacker->oppn_info[being_attacked->idx], NUM_ROWS, ship_row, ship_col, '-');
+        return 0;
     }
     else
     {
@@ -154,7 +142,27 @@ void phase_fire(player_t *attacker, player_t *being_attacked)
                 break;
         }
         arr_2d_set_val(attacker->oppn_info[being_attacked->idx], NUM_ROWS, ship_row, ship_col, 'X');
+        return 1;
     }
+    return -1;
+}
+
+void phase_fire(player_t *attacker, player_t *being_attacked)
+{
+    char c, ship_row = 10, ship_col = 10;
+    printf("Firing at %s.\n", being_attacked->playerName);
+
+    ship_row = get_character("Row (A-J): ",
+                            "You must fire between row A to J\n",
+                            'A',
+                            'J') - 'A';
+
+    ship_col = get_character("Col (0-9): ",
+                            "You must fire between column 0 to 9\n",
+                            '0',
+                            '9') - '0';
+
+    fire_after_calc(being_attacked, attacker, ship_row, ship_col);
 }
 
 uint8_t is_ship_sunk(player_t *being_attacked, char ship_idx)

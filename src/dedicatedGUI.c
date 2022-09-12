@@ -9,6 +9,8 @@
 
 static GtkApplication *app;
 GtkWidget *create_server_window = NULL;
+GtkWidget *fire_phase_window = NULL;
+GtkWidget *select_oppn_window = NULL;
 
 static server_t *server;
 char *name;
@@ -30,6 +32,7 @@ uint8_t placing_ship = 0;
 static void preparation_phase(void);
 static void place_ship_on_grid(GtkWidget *widget, gpointer data);
 static void refresh_button_grid(uint8_t all);
+static void end_round(GtkWidget *widget, gpointer data);
 
 void destroy (GtkWidget* widget, gpointer data)
 {
@@ -42,13 +45,13 @@ void close_window(GtkWidget *widget, gpointer data)
   gtk_window_close(GTK_WINDOW(data));
 }
 
-static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
+static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char *message, const char *title)
 {
   GtkWidget *dialog, *label, *content_area;
   GtkDialogFlags flags;
 
-  flags = GTK_DIALOG_DESTROY_WITH_PARENT;
-  dialog = gtk_dialog_new_with_buttons ("ERROR",
+  flags = GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT;
+  dialog = gtk_dialog_new_with_buttons ((title == NULL) ? "ERROR" : title,
                                         parent,
                                         flags,
                                         ("OK"),
@@ -66,9 +69,28 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
   gtk_widget_show_all (dialog);
 }
 
+static void fire_phase_attack(GtkWidget *widget, gpointer data)
+{
+  ship_loc_t *but_pos = (ship_loc_t *)data;
+  uint8_t hitormiss = fire_after_calc(server->player_list[but_pos->orientation], 
+                                      server->player_list[player_idx], 
+                                      but_pos->origin_row, 
+                                      but_pos->origin_col);
+
+  if (hitormiss)
+    gtk_entry_blank_error_dialog(NULL, "HIT!", "Status");
+  else
+    gtk_entry_blank_error_dialog(NULL, "MISS!", "Status");
+  gtk_widget_destroy(fire_phase_window);
+  uint8_t update = 1;
+  end_round(NULL, GINT_TO_POINTER(update));
+}
+
 static void fire_phase(GtkWidget *widget, gpointer data)
 {
-  GtkWidget *fire_phase_window = gtk_application_window_new(app);
+  gint index = gtk_list_box_row_get_index(gtk_list_box_get_selected_row(GTK_LIST_BOX(data)));
+
+  fire_phase_window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(fire_phase_window), "Fire phase!");
   gtk_window_set_default_size(GTK_WINDOW(fire_phase_window), 320, 240);
   gtk_window_set_position(GTK_WINDOW(fire_phase_window), GTK_WIN_POS_CENTER_ALWAYS);
@@ -80,21 +102,58 @@ static void fire_phase(GtkWidget *widget, gpointer data)
   gtk_widget_set_hexpand(fire_phase_vbox, FALSE);
   gtk_container_add(GTK_CONTAINER(fire_phase_window), fire_phase_vbox);
 
-  GdkScreen *screen = gdk_screen_get_default();
-  GtkCssProvider *css = gtk_css_provider_new();
-  GtkStyleContext *ctx = gtk_style_context_new();
-  gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-  gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(css), "#small {padding: 0;}", -1, NULL);
+  char *lbl_txt = "Firing on ";
+  uint8_t buffsz = strlen(lbl_txt)+strlen(server->player_list[index]->playerName)+1;
+  char buffer[buffsz];
+  snprintf(buffer, buffsz, "%s%s", lbl_txt, server->player_list[index]->playerName);
+  GtkWidget *fire_phase_label = gtk_label_new(buffer);
+  gtk_box_pack_start(GTK_BOX(fire_phase_vbox), fire_phase_label, FALSE, FALSE, 0);
 
-  GtkWidget *button = gtk_button_new_with_label("  ");
-  gtk_widget_set_name(button, "small");
-  gtk_box_pack_start(GTK_BOX(fire_phase_vbox), button, FALSE, FALSE, 0);
+  // GdkScreen *screen = gdk_screen_get_default();
+  // GtkCssProvider *css = gtk_css_provider_new();
+  // GtkStyleContext *ctx = gtk_style_context_new();
+  // gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  // gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(css), "#small {padding: 0;}", -1, NULL);
 
-  GtkWidget *ref = gtk_button_new();
-  gtk_widget_set_vexpand(ref, FALSE);
-  gtk_widget_set_hexpand(ref, FALSE);
-  gtk_box_pack_start(GTK_BOX(fire_phase_vbox), ref, FALSE, FALSE, 0);
+  GtkWidget *fire_phase_grid = gtk_grid_new();
+  gtk_grid_set_column_homogeneous(GTK_GRID(fire_phase_grid), TRUE);
+  gtk_grid_set_row_homogeneous(GTK_GRID(fire_phase_grid), TRUE);
+  gtk_box_pack_start(GTK_BOX(fire_phase_vbox), fire_phase_grid, FALSE, FALSE, 0);
 
+  for (int i = 0; i < NUM_ROWS; i++)
+  {
+    for (int j = 0; j < NUM_COLS; j++)
+    {
+      ship_loc_t *but_pos = (ship_loc_t *)malloc(sizeof(ship_loc_t));
+      but_pos->origin_row = i;
+      but_pos->origin_col = j;
+      but_pos->orientation = index;
+      char mark[2];
+      mark[0] = server->player_list[player_idx]->oppn_info[index][(i*NUM_ROWS)+j];
+      mark[1] = '\0';
+      GtkWidget *button = gtk_button_new_with_label(" ");
+
+      char *mrkp_txt;
+      if(mark[0] == 'X')
+      {
+        mrkp_txt = "<span foreground='#ff0000'>X</span>";
+        gtk_widget_set_sensitive(button, FALSE);
+      }
+      else if (mark[0] == '-')
+      {
+        mrkp_txt = "<span foreground='#808080'>-</span>";
+        gtk_widget_set_sensitive(button, FALSE);
+      }
+      else
+        mrkp_txt = "<span foreground='#00ff00'>O</span>";
+
+      gtk_label_set_markup(GTK_LABEL(gtk_bin_get_child(GTK_BIN(button))), mrkp_txt);
+      gtk_grid_attach(GTK_GRID(fire_phase_grid), button, j, i, 1, 1);
+      g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(fire_phase_attack), but_pos);
+    }
+  }
+
+  gtk_window_close(GTK_WINDOW(select_oppn_window));
   gtk_widget_show_all(fire_phase_window);
 }
 
@@ -138,6 +197,8 @@ static void view_your_notes(GtkWidget *widget, gpointer data)
       char *tag_open;
       if (mark[0] == 'X')
         tag_open = "<b><span background='#ff0000' foreground='#ffffff' font='16'>";
+      else if (mark[0] == '-')
+        tag_open = "<b><span background='#808080' foreground='#ffffff' font='16'>";
       else
         tag_open = "<b><span background='#00ff00' foreground='#ffffff' font='16'>";
       char *tag_close = "</span></b>";
@@ -154,12 +215,13 @@ static void view_your_notes(GtkWidget *widget, gpointer data)
   gtk_box_pack_start(GTK_BOX(view_notes_vbox), view_notes_close_button, FALSE, FALSE, 0);
   g_signal_connect(G_OBJECT(view_notes_close_button), "clicked", G_CALLBACK(close_window), view_notes_window);
 
+  gtk_window_close(GTK_WINDOW(select_oppn_window));
   gtk_widget_show_all(view_notes_window);
 }
 
 static void select_an_oppn(GtkWidget *widget, gpointer data)
 {
-  GtkWidget *select_oppn_window = gtk_application_window_new(app);
+  select_oppn_window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(select_oppn_window), "Select a player");
   gtk_window_set_default_size(GTK_WINDOW(select_oppn_window), 320, 240);
   gtk_window_set_position(GTK_WINDOW(select_oppn_window), GTK_WIN_POS_CENTER_ALWAYS);
@@ -200,8 +262,38 @@ static void select_an_oppn(GtkWidget *widget, gpointer data)
   gtk_widget_show_all(select_oppn_window);
 }
 
+static void game_over(void)
+{
+  GtkWidget *end_game_window = gtk_application_window_new(app);
+  gtk_window_set_title(GTK_WINDOW(end_game_window), "Select a player");
+  gtk_window_set_default_size(GTK_WINDOW(end_game_window), 320, 240);
+  gtk_window_set_position(GTK_WINDOW(end_game_window), GTK_WIN_POS_CENTER_ALWAYS);
+  g_signal_connect(G_OBJECT(end_game_window), "destroy", G_CALLBACK(destroy), NULL);
+
+  GtkWidget *end_game_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 50);
+  gtk_widget_set_valign(end_game_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(end_game_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_vexpand(end_game_vbox, FALSE);
+  gtk_widget_set_hexpand(end_game_vbox, FALSE);
+
+  GtkWidget *end_game_label = gtk_label_new("");
+  gtk_label_set_markup(GTK_LABEL(end_game_label), "<b><span font=36>GAME OVER</span></b>");
+  gtk_box_pack_start(GTK_BOX(end_game_vbox), end_game_label, FALSE, FALSE, 0);
+
+  GtkWidget *end_game_button = gtk_button_new_with_label("EXIT");
+  gtk_box_pack_start(GTK_BOX(end_game_vbox), end_game_button, FALSE, FALSE, 0);
+  g_signal_connect(G_OBJECT(end_game_button), "clicked", G_CALLBACK(destroy), NULL);
+
+  gtk_widget_show_all(end_game_window);
+}
+
 static void end_round(GtkWidget *widget, gpointer data)
 {
+  if (game_over_base_case(server))
+  {
+    game_over();
+    return;
+  }
   if (player_idx == server->playercnt - 1)
   {
     player_idx = 0;
@@ -211,6 +303,12 @@ static void end_round(GtkWidget *widget, gpointer data)
   player_idx++;
 
 skip_increment:
+  // char *next_turn_pref = "Round Ended. ";
+  // char *next_turn_suff = "'s turn.";
+  // uint8_t buffsz = strlen(next_turn_pref)+strlen(server->player_list[player_idx]->playerName)+strlen(next_turn_suff)+1;
+  // char buffer[buffsz];
+  // snprintf(buffer, buffsz, "%s%s%s", next_turn_pref, server->player_list[player_idx]->playerName, next_turn_suff);
+  // gtk_entry_blank_error_dialog(NULL, buffer, "End of Round");
   if (GPOINTER_TO_UINT(data))
   {
     char *lbl_txt = "'s trun";
@@ -228,6 +326,7 @@ static void combat_menu(void)
   gtk_window_set_title(GTK_WINDOW(combat_menu_window), "Begin Game");
   gtk_window_set_default_size(GTK_WINDOW(combat_menu_window), 320, 240);
   gtk_window_set_position(GTK_WINDOW(combat_menu_window), GTK_WIN_POS_CENTER_ALWAYS);
+  g_signal_connect(G_OBJECT(combat_menu_window), "destroy", G_CALLBACK(destroy), NULL);
 
   GtkWidget *combat_menu_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
   gtk_widget_set_valign(combat_menu_vbox, GTK_ALIGN_CENTER);
@@ -269,7 +368,7 @@ static void next_player_placement(GtkWidget *widget, gpointer data)
 {
   if (placed_ships != NUM_SHIPS)
   {
-    gtk_entry_blank_error_dialog(NULL, "You haven't placed all the ships!");
+    gtk_entry_blank_error_dialog(NULL, "You haven't placed all the ships!", NULL);
     return;
   }
 
@@ -310,7 +409,7 @@ static void change_orientation(GtkWidget *widget, gpointer data)
 {
   if (placing_ship)
   {
-    gtk_entry_blank_error_dialog(NULL, "Unable to change orientation; You are placing a ship!");
+    gtk_entry_blank_error_dialog(NULL, "Unable to change orientation; You are placing a ship!", NULL);
     return;
   }
   orientation = (orientation) ? 0 : 1;
@@ -412,7 +511,7 @@ static void place_ship_on_grid(GtkWidget* widget, gpointer data)
                           (ship_loc_t){ship_origin_row, ship_origin_col, orientation}, 
                           ship_sz_map[placed_ships]))
   {
-    gtk_entry_blank_error_dialog(NULL, "Cannot place ship at that location!");
+    gtk_entry_blank_error_dialog(NULL, "Cannot place ship at that location!", NULL);
     return;
   }
 
@@ -513,7 +612,7 @@ static void initialize_players(GtkWidget *widget, gpointer data)
   {
     if (!strlen(gtk_entry_get_text(GTK_ENTRY(playerNameDialog[i]))))
     {
-      gtk_entry_blank_error_dialog(NULL, "ERROR: Names cannot be blank!");
+      gtk_entry_blank_error_dialog(NULL, "ERROR: Names cannot be blank!", NULL);
       error_flag = 0;
       break;
     }
@@ -521,7 +620,7 @@ static void initialize_players(GtkWidget *widget, gpointer data)
     {
       if (!strcmp(gtk_entry_get_text(GTK_ENTRY(playerNameDialog[i])), gtk_entry_get_text(GTK_ENTRY(playerNameDialog[j]))))
       {
-        gtk_entry_blank_error_dialog(NULL, "ERROR: Names cannot be same!");
+        gtk_entry_blank_error_dialog(NULL, "ERROR: Names cannot be same!", NULL);
         error_flag = 0;
         break;
       }
@@ -601,14 +700,14 @@ static void set_server_details(GtkWidget *widget, gpointer data)
 
   if (!strlen(text_from_name_entry))
   {
-    gtk_entry_blank_error_dialog(NULL, "Server name field cannot be blank!");
+    gtk_entry_blank_error_dialog(NULL, "Server name field cannot be blank!", NULL);
     printf("ERROR: Field cannot be blank!\n");
     err_flag = 0;
   }
 
   if (!strlen(text_from_playercnt_entry))
   {
-    gtk_entry_blank_error_dialog(NULL, "Number of players field cannot be blank!");
+    gtk_entry_blank_error_dialog(NULL, "Number of players field cannot be blank!", NULL);
     printf("ERROR: Field cannot be blank!\n");
     err_flag = 0;
   }
@@ -616,7 +715,7 @@ static void set_server_details(GtkWidget *widget, gpointer data)
   if (gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(gui_args->server_pass_enabled_widget)) == TRUE &&
         !strlen(text_from_pass_entry))
   {
-    gtk_entry_blank_error_dialog(NULL, "Server password field cannot be blank!");
+    gtk_entry_blank_error_dialog(NULL, "Server password field cannot be blank!", NULL);
     err_flag = 0;
     printf("ERROR: Field cannot be blank\n");
   }
