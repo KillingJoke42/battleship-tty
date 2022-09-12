@@ -66,22 +66,6 @@ static void gtk_entry_blank_error_dialog(GtkWindow* parent, const char* message)
   gtk_widget_show_all (dialog);
 }
 
-static void test(GtkWidget *widget, gpointer data)
-{
-  char *lbl_mrkp_txt;
-  if (placing_ship == 0)
-  {
-    lbl_mrkp_txt = "<span background='#ff0000'>  </span>";
-    placing_ship = 1;
-  }
-  else
-  {
-    lbl_mrkp_txt = "<span>  </span>";
-    placing_ship = 0;
-  }
-  gtk_label_set_markup(GTK_LABEL(gtk_bin_get_child(GTK_BIN(widget))), lbl_mrkp_txt);
-}
-
 static void fire_phase(GtkWidget *widget, gpointer data)
 {
   GtkWidget *fire_phase_window = gtk_application_window_new(app);
@@ -89,30 +73,12 @@ static void fire_phase(GtkWidget *widget, gpointer data)
   gtk_window_set_default_size(GTK_WINDOW(fire_phase_window), 320, 240);
   gtk_window_set_position(GTK_WINDOW(fire_phase_window), GTK_WIN_POS_CENTER_ALWAYS);
 
-  GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-  // gtk_container_add(GTK_CONTAINER(fire_phase_window), vbox);
-  gtk_widget_set_valign(vbox, GTK_ALIGN_CENTER);
-  gtk_widget_set_halign(vbox, GTK_ALIGN_CENTER);
-  gtk_widget_set_vexpand(vbox, FALSE);
-  gtk_widget_set_hexpand(vbox, FALSE);
-
-  GtkWidget *grid = gtk_grid_new();
-  gtk_container_add(GTK_CONTAINER(fire_phase_window), grid);
-  gtk_grid_set_column_homogeneous(GTK_GRID(grid), TRUE);
-  gtk_grid_set_row_homogeneous(GTK_GRID(grid), TRUE);
-
-  for (int i = 0; i < NUM_ROWS; i++)
-  {
-    for (int j = 0; j < NUM_COLS; j++)
-    {
-      GtkWidget *button = gtk_button_new_with_label("  ");
-      gtk_grid_attach(GTK_GRID(grid), button, j, i, 1, 1);
-      g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(test), NULL);
-    }
-  }
-
-  // char *lbl_mrkp_txt = "<span background='#ff0000' foreground='#ff0000'>......</span>";
-  // gtk_label_set_markup(GTK_LABEL(gtk_bin_get_child(GTK_BIN(button))), lbl_mrkp_txt);
+  GtkWidget *fire_phase_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 20);
+  gtk_widget_set_valign(fire_phase_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_halign(fire_phase_vbox, GTK_ALIGN_CENTER);
+  gtk_widget_set_vexpand(fire_phase_vbox, FALSE);
+  gtk_widget_set_hexpand(fire_phase_vbox, FALSE);
+  gtk_container_add(GTK_CONTAINER(fire_phase_window), fire_phase_vbox);
 
   gtk_widget_show_all(fire_phase_window);
 }
