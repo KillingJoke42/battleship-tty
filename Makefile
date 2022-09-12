@@ -3,14 +3,20 @@ INCLUDE_DIR=./include
 CC=gcc
 CFLAGS=-I$(INCLUDE_DIR)
 # LINKER=-lncurses
-GTK_CFLAGS=pkg-config --cflags --libs gtk+-3.0
 
 OBJ_DIR=./obj
 
-_HEADERS = morse_interpreter.h morse_data.h battleship.h playertools.h utils.h abilities.h dedicatedGUI.h
-HEADERS = $(patsubst %,$(INCLUDE_DIR)/%,$(_HEADERS))
+ifeq ($(GUI), 1)
+	GTK_CFLAGS=pkg-config --cflags --libs gtk+-3.0
+	_HEADERS = battleship.h playertools.h utils.h abilities.h dedicatedGUI.h
+	_OBJ = main.o battleship.o playertools.o utils.o abilities.o dedicatedGUI.o
+	CFLAGS += -DGUI_ENABLE
+else
+	_HEADERS = battleship.h playertools.h utils.h abilities.h
+	_OBJ = main.o battleship.o playertools.o utils.o abilities.o
+endif
 
-_OBJ = main.o morse_interpreter.o battleship.o playertools.o utils.o abilities.o dedicatedGUI.o
+HEADERS = $(patsubst %,$(INCLUDE_DIR)/%,$(_HEADERS))
 OBJ = $(patsubst %,$(OBJ_DIR)/%,$(_OBJ))
 
 $(OBJ_DIR)/%.o: src/%.c $(HEADERS)

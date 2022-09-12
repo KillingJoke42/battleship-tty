@@ -1,38 +1,22 @@
 #include <battleship.h>
 #include <playertools.h>
 #include <utils.h>
+
+#ifdef GUI_ENABLE
 #include <dedicatedGUI.h>
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 int main(int argc, char **argv)
 {
-    // player_t *player = (player_t *)malloc(sizeof(player_t));
-    // player_init(player);
-    // phase_place_ships(player);
-    // while(1)
-    // {
-    //     phase_fire(player);
-    //     if (all_ships_sunk(player))
-    //     {
-    //         printf("All ships sunk for %s.\n", player->playerName);
-    //         break;
-    //     }
-    // }
-    // server_t *server = (server_t *)malloc(sizeof(server_t));
-    // create_server(server);
-    // start_server(server);
-    // printf("Server Name: %s\n", server->server_name);
-    // printf("Server Max players: %d\n", server->playercnt);
-    // printf("Server joined players: %d\n", server->joined_players);
-    // for (int i = 0; i < server->joined_players; i++)
-    // {
-    //     printf("Player %d name: %s\n", (i+1), server->player_list[i]->playerName);
-    // }
 
+#ifdef GUI_ENABLE
     gtk_app_init(argc, argv);
     return 0;
+#endif
 
     printf("battleship-tty\n");
     printf("Menu\n");
