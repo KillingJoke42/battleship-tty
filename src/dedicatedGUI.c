@@ -17,8 +17,6 @@ char *name;
 GtkWidget **playerNameDialog;
 GtkWidget **prepPhaseButtonGrid;
 
-GtkWidget *activeButton;
-
 GtkWidget *prep_phase_curr_ship_label;
 GtkWidget *prep_phase_label;
 GtkWidget *turn_prompt;
@@ -90,6 +88,12 @@ static void fire_phase(GtkWidget *widget, gpointer data)
 {
   gint index = gtk_list_box_row_get_index(gtk_list_box_get_selected_row(GTK_LIST_BOX(data)));
 
+  if (index == -1)
+  {
+    gtk_entry_blank_error_dialog(NULL, "Please make a selection!!", NULL);
+    return;
+  }
+
   fire_phase_window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(fire_phase_window), "Fire phase!");
   gtk_window_set_default_size(GTK_WINDOW(fire_phase_window), 320, 240);
@@ -160,6 +164,12 @@ static void fire_phase(GtkWidget *widget, gpointer data)
 static void view_your_notes(GtkWidget *widget, gpointer data)
 {
   gint index = gtk_list_box_row_get_index(gtk_list_box_get_selected_row(GTK_LIST_BOX(data)));
+  
+  if (index == -1)
+  {
+    gtk_entry_blank_error_dialog(NULL, "Please make a selection!!", NULL);
+    return;
+  }
 
   GtkWidget *view_notes_window = gtk_application_window_new(app);
   gtk_window_set_title(GTK_WINDOW(view_notes_window), "Notes");
@@ -265,7 +275,7 @@ static void select_an_oppn(GtkWidget *widget, gpointer data)
 static void game_over(void)
 {
   GtkWidget *end_game_window = gtk_application_window_new(app);
-  gtk_window_set_title(GTK_WINDOW(end_game_window), "Select a player");
+  gtk_window_set_title(GTK_WINDOW(end_game_window), "GAME OVER");
   gtk_window_set_default_size(GTK_WINDOW(end_game_window), 320, 240);
   gtk_window_set_position(GTK_WINDOW(end_game_window), GTK_WIN_POS_CENTER_ALWAYS);
   g_signal_connect(G_OBJECT(end_game_window), "destroy", G_CALLBACK(destroy), NULL);
@@ -275,9 +285,10 @@ static void game_over(void)
   gtk_widget_set_halign(end_game_vbox, GTK_ALIGN_CENTER);
   gtk_widget_set_vexpand(end_game_vbox, FALSE);
   gtk_widget_set_hexpand(end_game_vbox, FALSE);
+  gtk_container_add(GTK_CONTAINER(end_game_window), end_game_vbox);
 
   GtkWidget *end_game_label = gtk_label_new("");
-  gtk_label_set_markup(GTK_LABEL(end_game_label), "<b><span font=36>GAME OVER</span></b>");
+  gtk_label_set_markup(GTK_LABEL(end_game_label), "<b><span font='36'>GAME OVER</span></b>");
   gtk_box_pack_start(GTK_BOX(end_game_vbox), end_game_label, FALSE, FALSE, 0);
 
   GtkWidget *end_game_button = gtk_button_new_with_label("EXIT");
@@ -291,6 +302,10 @@ static void end_round(GtkWidget *widget, gpointer data)
 {
   if (game_over_base_case(server))
   {
+    if (ship_loc)
+      free(ship_loc);
+
+    exit_free(server);
     game_over();
     return;
   }
@@ -377,6 +392,11 @@ static void next_player_placement(GtkWidget *widget, gpointer data)
   if (player_idx == server->playercnt)
   {
     player_idx = 0;
+
+    for (int i = 0; i < (NUM_ROWS * NUM_COLS); i++)
+      gtk_widget_destroy(prepPhaseButtonGrid[i]);
+    free(prepPhaseButtonGrid);
+
     gtk_widget_hide(GTK_WIDGET(data));
     combat_menu();
     return;
@@ -647,6 +667,10 @@ static void initialize_players(GtkWidget *widget, gpointer data)
   }
 
   free(rng_arr);
+
+  for (int i = 0; i < server->playercnt; i++)
+    gtk_widget_destroy(playerNameDialog[i]);
+
   free(playerNameDialog);
   gtk_widget_hide(create_server_window);
   gtk_widget_destroy(GTK_WIDGET(data));
