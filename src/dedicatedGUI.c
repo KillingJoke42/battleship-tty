@@ -80,6 +80,21 @@ static void fire_phase(GtkWidget *widget, gpointer data)
   gtk_widget_set_hexpand(fire_phase_vbox, FALSE);
   gtk_container_add(GTK_CONTAINER(fire_phase_window), fire_phase_vbox);
 
+  GdkScreen *screen = gdk_screen_get_default();
+  GtkCssProvider *css = gtk_css_provider_new();
+  GtkStyleContext *ctx = gtk_style_context_new();
+  gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(css), "#small {padding: 0;}", -1, NULL);
+
+  GtkWidget *button = gtk_button_new_with_label("  ");
+  gtk_widget_set_name(button, "small");
+  gtk_box_pack_start(GTK_BOX(fire_phase_vbox), button, FALSE, FALSE, 0);
+
+  GtkWidget *ref = gtk_button_new();
+  gtk_widget_set_vexpand(ref, FALSE);
+  gtk_widget_set_hexpand(ref, FALSE);
+  gtk_box_pack_start(GTK_BOX(fire_phase_vbox), ref, FALSE, FALSE, 0);
+
   gtk_widget_show_all(fire_phase_window);
 }
 
@@ -362,7 +377,7 @@ static void refresh_button_grid(uint8_t all)
       {
         gtk_label_set_markup(
           GTK_LABEL(gtk_bin_get_child(GTK_BIN(prepPhaseButtonGrid[(i*NUM_ROWS)+j]))), 
-          default_css);
+          refresh_all_css);
       }
     }
   }
@@ -448,6 +463,13 @@ static void preparation_phase(void)
   gtk_grid_set_row_homogeneous(GTK_GRID(prep_phase_button_gridbox), TRUE);
   gtk_grid_set_column_homogeneous(GTK_GRID(prep_phase_button_gridbox), TRUE);
   prepPhaseButtonGrid = (GtkWidget **)malloc(sizeof(GtkWidget *) * NUM_ROWS * NUM_COLS);
+
+  GdkScreen *screen = gdk_screen_get_default();
+  GtkCssProvider *css = gtk_css_provider_new();
+  GtkStyleContext *ctx = gtk_style_context_new();
+  gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(css), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
+  gtk_css_provider_load_from_data(GTK_CSS_PROVIDER(css), "* {padding: 1px;}", -1, NULL);
+
   for (int i = 0; i < NUM_ROWS; i++)
   {
     for (int j = 0; j < NUM_COLS; j++)
@@ -455,7 +477,7 @@ static void preparation_phase(void)
       ship_loc_t *button_pos = (ship_loc_t *)malloc(sizeof(ship_loc_t));
       button_pos->origin_row = i;
       button_pos->origin_col = j;
-      prepPhaseButtonGrid[(i*NUM_ROWS)+j] = gtk_button_new_with_label("  ");
+      prepPhaseButtonGrid[(i*NUM_ROWS)+j] = gtk_button_new_with_label("      ");
       gtk_grid_attach(GTK_GRID(prep_phase_button_gridbox), prepPhaseButtonGrid[(i*NUM_ROWS)+j], j, i, 1, 1);
       g_signal_connect(G_OBJECT(prepPhaseButtonGrid[(i*NUM_ROWS)+j]), "clicked", G_CALLBACK(place_ship_on_grid), button_pos);
     }

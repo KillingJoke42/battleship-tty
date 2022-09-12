@@ -16,14 +16,15 @@ typedef struct {
     GtkWidget *server_password_widget;
 } create_server_ctx_t;
 
-static char *default_css = "<span>  </span>";
+static char *refresh_all_css = "<span>      </span>";
+static char *default_css = "<span>    </span>";
 
 static char *ship_css_map[55] = {
-    "<span background='#00ff00'>  </span>",
-    "<span background='#ff0000'>  </span>",
-    "<span background='#0000ff'>  </span>",
-    "<span background='#808000'>  </span>",
-    "<span background='#ff00ff'>  </span>"
+    "<span background='#00ff00'>    </span>",
+    "<span background='#ff0000'>    </span>",
+    "<span background='#0000ff'>    </span>",
+    "<span background='#808000'>    </span>",
+    "<span background='#ff00ff'>    </span>"
 };
 
 // void activate (GtkApplication* app, gpointer user_data);
